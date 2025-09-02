@@ -1,26 +1,217 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* SkillSync Design System - Purposeful Simplicity */
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* SkillSync Brand Colors - Neural Blue + Electric Accent */
+    --background: 0 0% 98%;
+    --foreground: 215 25% 15%;
+
+    /* Deep Neural Blue Primary */
+    --primary: 215 35% 15%;        /* Deep neural blue #0F172A */
+    --primary-foreground: 0 0% 98%;
+    --primary-light: 215 25% 25%;
+    --primary-lighter: 215 15% 85%;
+
+    /* Electric Cyan Accent */
+    --accent: 195 95% 42%;         /* Electric cyan #06B6D4 */
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 195 85% 85%;
+    --accent-glow: 195 95% 42%;
+
+    /* Warm Amber Secondary */
+    --secondary: 43 96% 56%;       /* Warm amber #F59E0B */
+    --secondary-foreground: 215 35% 15%;
+    --secondary-light: 43 85% 90%;
+
+    /* Soft Violet Tertiary */
+    --tertiary: 258 90% 66%;       /* Soft violet #8B5CF6 */
+    --tertiary-foreground: 0 0% 100%;
+    --tertiary-light: 258 70% 90%;
+
+    /* Neutral Grays */
+    --muted: 215 8% 94%;
+    --muted-foreground: 215 10% 55%;
+    --border: 215 8% 88%;
+    --input: 215 8% 92%;
+    --ring: 195 95% 42%;
+
+    /* Cards & Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Status Colors */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 70% 45%;
+    --warning: 43 96% 56%;
+
+    /* Design System */
+    --radius: 0.75rem;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-soft: 0 4px 20px -4px hsl(215 35% 15% / 0.1);
+    --shadow-elegant: 0 10px 40px -10px hsl(215 35% 15% / 0.15);
+    --gradient-primary: linear-gradient(135deg, hsl(215 35% 15%), hsl(215 25% 25%));
+    --gradient-accent: linear-gradient(135deg, hsl(195 95% 42%), hsl(199 89% 48%));
+    --gradient-hero: linear-gradient(135deg, hsl(215 35% 15%) 0%, hsl(215 25% 20%) 25%, hsl(195 95% 25%) 75%, hsl(195 95% 42%) 100%);
+    --gradient-neural: radial-gradient(ellipse at top, hsl(195 95% 42% / 0.1) 0%, transparent 50%), linear-gradient(135deg, hsl(215 35% 15%) 0%, hsl(215 30% 12%) 100%);
+  }
+
+  .dark {
+    /* Dark Mode - Neural Blue + Electric Accent */
+    --background: 215 35% 6%;
+    --foreground: 0 0% 95%;
+
+    --primary: 0 0% 95%;
+    --primary-foreground: 215 35% 15%;
+    --primary-light: 215 25% 25%;
+    --primary-lighter: 215 20% 20%;
+
+    --accent: 195 95% 52%;         /* Brighter cyan for dark mode */
+    --accent-foreground: 215 35% 8%;
+    --accent-light: 195 40% 25%;
+    --accent-glow: 195 95% 52%;
+
+    --secondary: 43 95% 65%;       /* Brighter amber for dark mode */
+    --secondary-foreground: 215 35% 8%;
+    --secondary-light: 43 30% 20%;
+
+    --tertiary: 258 90% 75%;       /* Brighter violet for dark mode */
+    --tertiary-foreground: 215 35% 8%;
+    --tertiary-light: 258 30% 20%;
+
+    --muted: 215 25% 12%;
+    --muted-foreground: 215 15% 65%;
+    --border: 215 25% 18%;
+    --input: 215 25% 12%;
+
+    --card: 215 30% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 215 30% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.3);
+    --shadow-elegant: 0 10px 40px -10px hsl(0 0% 0% / 0.4);
+    --gradient-hero: linear-gradient(135deg, hsl(215 35% 6%) 0%, hsl(215 30% 8%) 25%, hsl(195 80% 15%) 75%, hsl(195 70% 25%) 100%);
+    --gradient-neural: radial-gradient(ellipse at top, hsl(195 80% 25% / 0.2) 0%, transparent 50%), linear-gradient(135deg, hsl(215 35% 6%) 0%, hsl(215 30% 4%) 100%);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /* Progress Ring Animation */
+  .progress-ring {
+    @apply transition-all duration-700 ease-out;
+  }
+
+  /* Smooth Hover Animations */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-elegant;
+  }
+
+  /* Glowing Effect */
+  .glow-accent {
+    @apply shadow-[0_0_20px_hsl(var(--accent-glow)/0.3)];
+  }
+
+  /* Feature Card Hover */
+  .feature-card {
+    @apply bg-card border rounded-xl p-6 transition-all duration-300 hover:border-accent/30 hover:bg-accent-light/5 hover:-translate-y-1;
+    border-color: hsl(var(--border));
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Enhanced Gradient Text Variants */
+  .gradient-text-neural {
+    @apply bg-gradient-to-r from-accent via-tertiary to-secondary bg-clip-text text-transparent;
+  }
+
+  .gradient-text-glow {
+    @apply bg-gradient-to-r from-accent to-tertiary bg-clip-text text-transparent;
+    filter: drop-shadow(0 0 10px hsl(var(--accent) / 0.3));
+  }
+
+  /* Neural Network Background */
+  .bg-neural {
+    background: var(--gradient-neural);
+  }
+
+  /* Animated Gradient Border */
+  .gradient-border {
+    @apply relative overflow-hidden;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    @apply absolute inset-0 p-[1px] bg-gradient-to-r from-accent via-tertiary to-secondary rounded-lg;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: xor;
+  }
+
+  /* AI Chat Bubble Animation */
+  .typing-animation {
+    @apply animate-pulse;
+  }
+
+  /* Button Variants */
+  .btn-hero {
+    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-8 py-4 rounded-xl transition-all duration-300 hover:shadow-[0_8px_30px_hsl(var(--accent)/0.3)] hover:-translate-y-0.5;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--secondary)/0.3)];
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-outline {
+    @apply border-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.3)];
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-accent {
+    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--accent)/0.3)];
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
 }
