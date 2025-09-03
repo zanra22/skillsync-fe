@@ -6,7 +6,7 @@ import { Menu, X, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import Logo from "./Logo";
 import Brand from "./Brand";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,7 +34,7 @@ const Navigation = () => {
     }
   };
 
-  const mobileMenuVariants = {
+  const mobileMenuVariants: Variants = {
     hidden: { opacity: 0, y: -20 },
     visible: {
       opacity: 1,
