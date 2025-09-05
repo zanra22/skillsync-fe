@@ -11,7 +11,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Github, Chrome, Moon, Sun } from "
 import Link from "next/link";
 import { useState } from "react";
 import { signInSchema, type SignInFormData } from "@/lib/validations/auth";
-import { useSignIn } from "@/lib/queries/auth";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Brand from "@/components/Brand";
 import Logo from "@/components/Logo";
@@ -21,8 +21,8 @@ const SignInPage = () => {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   
-  // TanStack Query mutation
-  const signInMutation = useSignIn();
+  // Use AuthContext for secure authentication
+  const { login, isLoading } = useAuth();
   
   // React Hook Form with Zod validation
   const {
@@ -45,7 +45,7 @@ const SignInPage = () => {
 
   const onSubmit = async (data: SignInFormData) => {
     try {
-      await signInMutation.mutateAsync(data);
+      await login(data.email, data.password, data.rememberMe);
       // Redirect to dashboard on success
       router.push("/dashboard");
     } catch (error: any) {
@@ -56,6 +56,12 @@ const SignInPage = () => {
             type: "server",
             message: message as string,
           });
+        });
+      } else {
+        // Handle general error
+        setError("root", {
+          type: "server",
+          message: error.message || "An error occurred during sign in",
         });
       }
     }
@@ -134,7 +140,7 @@ const SignInPage = () => {
                 variant="outline" 
                 className="w-full border-border hover:bg-accent/10 hover:border-accent/30 transition-all duration-300"
                 onClick={() => handleSocialAuth("github")}
-                disabled={isSubmitting || signInMutation.isPending}
+                disabled={isSubmitting || isLoading}
               >
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
@@ -143,7 +149,7 @@ const SignInPage = () => {
                 variant="outline" 
                 className="w-full border-border hover:bg-accent/10 hover:border-accent/30 transition-all duration-300"
                 onClick={() => handleSocialAuth("google")}
-                disabled={isSubmitting || signInMutation.isPending}
+                disabled={isSubmitting || isLoading}
               >
                 <Chrome className="mr-2 h-4 w-4" />
                 Google
@@ -163,6 +169,13 @@ const SignInPage = () => {
 
             {/* Email & Password Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* General Error Message */}
+              {errors.root && (
+                <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                  {errors.root.message}
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-inter font-medium">
                   Email
@@ -175,7 +188,7 @@ const SignInPage = () => {
                     placeholder="Enter your email"
                     className="pl-10 border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
                     {...register("email")}
-                    disabled={isSubmitting || signInMutation.isPending}
+                    disabled={isSubmitting || isLoading}
                   />
                 </div>
                 {errors.email && (
@@ -197,7 +210,7 @@ const SignInPage = () => {
                     placeholder="Enter your password"
                     className="pl-10 pr-10 border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
                     {...register("password")}
-                    disabled={isSubmitting || signInMutation.isPending}
+                    disabled={isSubmitting || isLoading}
                   />
                   <Button
                     type="button"
@@ -205,7 +218,7 @@ const SignInPage = () => {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isSubmitting || signInMutation.isPending}
+                    disabled={isSubmitting || isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -228,7 +241,7 @@ const SignInPage = () => {
                     type="checkbox"
                     className="w-4 h-4 text-accent bg-background border-border rounded focus:ring-accent focus:ring-2"
                     {...register("rememberMe")}
-                    disabled={isSubmitting || signInMutation.isPending}
+                    disabled={isSubmitting || isLoading}
                   />
                   <Label htmlFor="rememberMe" className="text-sm font-inter text-muted-foreground">
                     Remember me
@@ -245,9 +258,9 @@ const SignInPage = () => {
               <Button 
                 type="submit" 
                 className="w-full btn-hero h-11"
-                disabled={isSubmitting || signInMutation.isPending}
+                disabled={isSubmitting || isLoading}
               >
-                {isSubmitting || signInMutation.isPending ? (
+                {isSubmitting || isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent-foreground mr-2"></div>
                     Signing in...
