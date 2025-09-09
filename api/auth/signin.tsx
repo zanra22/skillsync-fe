@@ -171,9 +171,8 @@ export const authApi = {
 
   // Sign up with email and password
   signUp: async (data: SignUpRequestDto): Promise<SignUpResponseDto> => {
-    // Note: This mutation would need to be implemented in your backend
     const mutation = `
-      mutation SignUp($input: SignUpInput!) {
+      mutation SignUp($input: SignupInput!) {
         auth {
           signUp(input: $input) {
             success

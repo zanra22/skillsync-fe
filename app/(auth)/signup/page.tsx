@@ -6,23 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, ArrowRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Mail, ArrowRight, User } from "lucide-react";
 import Link from "next/link";
-import { signInSchema, type SignInFormData } from "@/lib/validations/auth";
+import { signUpSchema, type SignUpFormData } from "@/lib/validations/auth";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AuthLayout from "@/components/auth/AuthLayout";
 import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 import PasswordInput from "@/components/auth/PasswordInput";
-import { useEffect } from "react";
 
-const SignInPage = () => {
+const SignUpPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const message = searchParams.get('message');
   
   // Use AuthContext for secure authentication
-  const { login, isLoading } = useAuth();
+  const { signup, isLoading } = useAuth();
   
   // React Hook Form with Zod validation
   const {
@@ -30,39 +28,39 @@ const SignInPage = () => {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<SignInFormData>({
-    resolver: zodResolver(signInSchema),
+    setValue,
+    clearErrors,
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
     defaultValues: {
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
-      rememberMe: false,
+      confirmPassword: "",
+      acceptTerms: false,
     },
   });
 
-  // Show success message if redirected from signup
-  useEffect(() => {
-    if (message) {
-      // You can show a toast notification here
-      console.log(message);
-    }
-  }, [message]);
-
-  const onSubmit = async (data: SignInFormData) => {
+  const onSubmit = async (data: SignUpFormData) => {
     try {
-      await login(data.email, data.password, data.rememberMe);
-      router.push("/dashboard");
+      await signup(data);
+      // Redirect to signin with success message
+      router.push("/signin?message=Account created successfully! Please check your email to verify your account.");
     } catch (error: any) {
+      // Handle specific field errors from backend
       if (error.details?.fieldErrors) {
         Object.entries(error.details.fieldErrors).forEach(([field, message]) => {
-          setError(field as keyof SignInFormData, {
+          setError(field as keyof SignUpFormData, {
             type: "server",
             message: message as string,
           });
         });
       } else {
+        // Handle general error
         setError("root", {
           type: "server",
-          message: error.message || "An error occurred during sign in",
+          message: error.message || "An error occurred during sign up",
         });
       }
     }
@@ -75,28 +73,22 @@ const SignInPage = () => {
 
   return (
     <AuthLayout
-      title="Welcome back to"
-      subtitle="Continue your journey to career excellence"
+      title="Join"
+      subtitle="Start your journey to career excellence"
     >
-      {/* Success Message */}
-      {message && (
-        <div className="mb-6 p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-          {message}
-        </div>
-      )}
-
-      {/* Sign In Card */}
+      {/* Sign Up Card */}
       <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-elegant">
         <CardHeader className="space-y-1 pb-6">
-          <CardTitle className="text-2xl font-poppins font-semibold text-center">
-            Sign In
+          <CardTitle className="text-2xl font-poppins font-semibold text-center flex items-center justify-center gap-2">
+            <User className="h-6 w-6" />
+            Create Account
           </CardTitle>
           <CardDescription className="text-center font-inter">
-            Enter your credentials to access your account
+            Join SkillSync and start your learning journey
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Social Sign In */}
+          {/* Social Sign Up */}
           <SocialAuthButtons 
             onSocialAuth={handleSocialAuth}
             disabled={isSubmitting || isLoading}
@@ -108,12 +100,12 @@ const SignInPage = () => {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground font-inter">
-                Or continue with email
+                Or create with email
               </span>
             </div>
           </div>
 
-          {/* Email & Password Form */}
+          {/* Sign Up Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* General Error Message */}
             {errors.root && (
@@ -122,6 +114,46 @@ const SignInPage = () => {
               </div>
             )}
             
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="font-inter font-medium">
+                  First Name
+                </Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="First name"
+                  className="border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
+                  {...register("firstName")}
+                  disabled={isSubmitting || isLoading}
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-destructive font-inter">
+                    {errors.firstName.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="font-inter font-medium">
+                  Last Name
+                </Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Last name"
+                  className="border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
+                  {...register("lastName")}
+                  disabled={isSubmitting || isLoading}
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-destructive font-inter">
+                    {errors.lastName.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email" className="font-inter font-medium">
                 Email
@@ -147,32 +179,53 @@ const SignInPage = () => {
             <PasswordInput
               id="password"
               label="Password"
-              placeholder="Enter your password"
+              placeholder="Create a password"
               error={errors.password?.message}
               disabled={isSubmitting || isLoading}
               {...register("password")}
             />
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <input
-                  id="rememberMe"
-                  type="checkbox"
-                  className="w-4 h-4 text-accent bg-background border-border rounded focus:ring-accent focus:ring-2"
-                  {...register("rememberMe")}
-                  disabled={isSubmitting || isLoading}
-                />
-                <Label htmlFor="rememberMe" className="text-sm font-inter text-muted-foreground">
-                  Remember me
+            <PasswordInput
+              id="confirmPassword"
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              error={errors.confirmPassword?.message}
+              disabled={isSubmitting || isLoading}
+              {...register("confirmPassword")}
+            />
+
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="acceptTerms"
+                onCheckedChange={(checked) => {
+                  setValue("acceptTerms", checked === true);
+                  if (checked) {
+                    clearErrors("acceptTerms");
+                  }
+                }}
+                disabled={isSubmitting || isLoading}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label 
+                  htmlFor="acceptTerms" 
+                  className="text-sm font-inter text-muted-foreground cursor-pointer"
+                >
+                  I agree to the{" "}
+                  <Link href="/terms" className="text-accent hover:text-accent/80">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="text-accent hover:text-accent/80">
+                    Privacy Policy
+                  </Link>
                 </Label>
               </div>
-              <Link 
-                href="/forgot-password" 
-                className="text-sm font-inter text-accent hover:text-accent/80 transition-colors"
-              >
-                Forgot password?
-              </Link>
             </div>
+            {errors.acceptTerms && (
+              <p className="text-sm text-destructive font-inter">
+                {errors.acceptTerms.message}
+              </p>
+            )}
 
             <Button 
               type="submit" 
@@ -182,11 +235,11 @@ const SignInPage = () => {
               {isSubmitting || isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent-foreground mr-2"></div>
-                  Signing in...
+                  Creating account...
                 </div>
               ) : (
                 <>
-                  Sign In
+                  Create Account
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -195,13 +248,13 @@ const SignInPage = () => {
 
           <div className="text-center">
             <span className="text-muted-foreground font-inter">
-              Don't have an account?{" "}
+              Already have an account?{" "}
             </span>
             <Link 
-              href="/signup" 
+              href="/signin" 
               className="text-accent hover:text-accent/80 font-inter font-medium transition-colors"
             >
-              Sign up
+              Sign in
             </Link>
           </div>
         </CardContent>
@@ -210,4 +263,4 @@ const SignInPage = () => {
   );
 };
 
-export default SignInPage;
+export default SignUpPage;

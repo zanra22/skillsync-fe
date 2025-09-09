@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi, tokenManager } from '@/api/auth/signin';
-import type { SignInResponseDto } from '@/types/auth/dto';
+import type { SignInResponseDto, SignUpRequestDto } from '@/types/auth/dto';
 
 interface AuthState {
   user: SignInResponseDto['user'] | null;
@@ -14,6 +14,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  signup: (data: SignUpRequestDto) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   updateUser: (user: Partial<SignInResponseDto['user']>) => void;
@@ -113,6 +114,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const signup = async (data: SignUpRequestDto) => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+      
+      await authApi.signUp(data);
+      
+      // After successful signup, user needs to verify email
+      // We don't automatically log them in
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    } catch (error) {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await authApi.signOut();
@@ -179,6 +195,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue: AuthContextType = {
     ...authState,
     login,
+    signup,
     logout,
     refreshToken,
     updateUser,
