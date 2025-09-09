@@ -14,9 +14,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AuthLayout from "@/components/auth/AuthLayout";
 import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 import PasswordInput from "@/components/auth/PasswordInput";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 
-const SignInPage = () => {
+const SignInContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
@@ -207,6 +207,27 @@ const SignInPage = () => {
         </CardContent>
       </Card>
     </AuthLayout>
+  );
+};
+
+const SignInPage = () => {
+  return (
+    <Suspense fallback={
+      <AuthLayout 
+        title="Welcome back"
+        subtitle="Sign in to your account to continue"
+      >
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </AuthLayout>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 };
 
