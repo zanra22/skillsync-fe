@@ -18,7 +18,7 @@ import {
 
 // Base API configuration - Updated to use GraphQL endpoint
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const GRAPHQL_ENDPOINT = `${API_BASE_URL}/graphql/`;
+const GRAPHQL_ENDPOINT = `${API_BASE_URL}/graphql`;
 
 class ApiError extends Error {
   constructor(
