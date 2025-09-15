@@ -11,8 +11,8 @@ import {
 } from "@/types/auth/otp";
 
 // Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const GRAPHQL_ENDPOINT = `${API_BASE_URL}/graphql/`;
+const API_BASE_URL = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "https://skillsync-graphql-e2dpdxhgebeqhhhk.southeastasia-01.azurewebsites.net";
+const GRAPHQL_ENDPOINT = API_BASE_URL;
 
 export class OTPApiError extends Error {
   constructor(

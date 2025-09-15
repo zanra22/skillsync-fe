@@ -98,7 +98,7 @@ const SignUpPage = () => {
 
   const handleSocialAuth = (provider: "google" | "github") => {
     console.log(`Initiating ${provider} authentication...`);
-    // window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/social/${provider}`;
+    // window.location.href = `${process.env.NEXT_PUBLIC_GRAPHQL_API_URL}/auth/social/${provider}`;
   };
 
   // Handle redirect when OTP is not required (signup completed successfully)
