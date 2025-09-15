@@ -14,7 +14,7 @@ export interface SignInResponseDto {
     lastName: string;
     avatar?: string;
     emailVerified: boolean;
-    role: 'user' | 'mentor' | 'admin';
+    role: 'learner' | 'mentor' | 'admin' | 'super_admin' | 'moderator' | 'hr_manager' | 'recruiter' | 'premium_user' | 'vip_mentor';
     createdAt: string;
     updatedAt: string;
   };

@@ -214,4 +214,80 @@
   .font-inter {
     font-family: 'Inter', sans-serif;
   }
+
+  /* Custom animations for chart transitions */
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .fade-in-50 {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .slide-in-from-bottom-4 {
+    animation: slideInFromBottom 0.7s ease-out;
+  }
+
+  .slide-in-from-right-4 {
+    animation: slideInFromRight 0.7s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInFromBottom {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInFromRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Tab transition animations */
+  .tab-content-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .tab-content-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+
+  /* Loading spinner enhancement */
+  .spinner-enhanced {
+    animation: spinEnhanced 1s linear infinite;
+  }
+
+  @keyframes spinEnhanced {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }

@@ -150,7 +150,7 @@ export const authApi = {
         lastName: "", // Backend doesn't have lastName yet
         avatar: undefined,
         emailVerified: loginResult.user.accountStatus === "active",
-        role: (loginResult.user.role === "super_admin" ? "admin" : "user") as "user" | "mentor" | "admin",
+        role: loginResult.user.role, // Use the actual role from backend
         createdAt: new Date().toISOString(), // Placeholder
         updatedAt: new Date().toISOString(), // Placeholder
       },
@@ -423,7 +423,7 @@ export const authApi = {
       lastName: "",
       avatar: undefined,
       emailVerified: user.accountStatus === "active",
-      role: user.role === "super_admin" ? "admin" : "user",
+      role: user.role, // Use the actual role from backend
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
