@@ -14,9 +14,13 @@ export interface SignInResponseDto {
     lastName: string;
     avatar?: string;
     emailVerified: boolean;
-    role: 'learner' | 'mentor' | 'admin' | 'super_admin' | 'moderator' | 'hr_manager' | 'recruiter' | 'premium_user' | 'vip_mentor';
+    role: 'new-user' | 'learner' | 'mentor' | 'admin' | 'super_admin' | 'moderator' | 'hr_manager' | 'recruiter' | 'premium_user' | 'vip_mentor';
     createdAt: string;
     updatedAt: string;
+    profile?: {
+      onboarding_completed: boolean;
+      onboarding_step: string;
+    };
   };
   tokens: {
     accessToken: string;
@@ -27,8 +31,6 @@ export interface SignInResponseDto {
 }
 
 export interface SignUpRequestDto {
-  firstName: string;
-  lastName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -42,6 +44,10 @@ export interface SignUpResponseDto {
     firstName: string;
     lastName: string;
     emailVerified: boolean;
+    profile?: {
+      onboarding_completed: boolean;
+      onboarding_step: string;
+    };
   };
   message: string;
 }

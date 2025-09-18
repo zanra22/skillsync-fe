@@ -189,8 +189,8 @@ export const authApi = {
 
     const variables = {
       input: {
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName: "", // Will be set during onboarding
+        lastName: "", // Will be set during onboarding
         email: data.email,
         password: data.password,
         acceptTerms: data.acceptTerms,
@@ -217,8 +217,8 @@ export const authApi = {
       user: {
         id: signUpResult.user.id,
         email: signUpResult.user.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName: "", // Will be set during onboarding
+        lastName: "", // Will be set during onboarding
         emailVerified: false,
       },
       message: signUpResult.message,

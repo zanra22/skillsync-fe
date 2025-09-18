@@ -265,8 +265,8 @@ export const useSignUp = () => {
       const variables = {
         input: {
           email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
+          firstName: "", // Will be set during onboarding
+          lastName: "", // Will be set during onboarding
           password: data.password,
           confirmPassword: data.confirmPassword,
           acceptTerms: data.acceptTerms,

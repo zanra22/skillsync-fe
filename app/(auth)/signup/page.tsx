@@ -1,7 +1,7 @@
 "use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, ArrowRight, User } from "lucide-react";
+import { Mail, ArrowRight, User, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { signUpSchema, type SignUpFormData } from "@/lib/validations/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -26,6 +26,38 @@ const SignUpPage = () => {
   // Use AuthContext for secure authentication
   const { signup, isLoading, otpRequired, pendingEmail, verifyOTP, resendOTP, clearOTPState, deviceInfo } = useAuth();
   
+  // Add success state to prevent signup form flash
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [otpFlowStarted, setOtpFlowStarted] = useState(false);
+  
+  // Check for persistent verification success flag
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const persistentSuccess = sessionStorage.getItem('signup-verification-success');
+      if (persistentSuccess === 'true') {
+        console.log('🔄 Found persistent verification success flag');
+        setVerificationSuccess(true);
+      }
+    }
+  }, []);
+  
+  // Track when OTP flow starts to prevent form flash
+  useEffect(() => {
+    if (otpRequired && pendingEmail) {
+      console.log('📱 OTP flow started - preventing form flash');
+      setOtpFlowStarted(true);
+    }
+  }, [otpRequired, pendingEmail]);
+  
+  // Clean up success flag when component unmounts
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('signup-verification-success');
+      }
+    };
+  }, []);
+  
   // React Hook Form with Zod validation
   const {
     register,
@@ -37,8 +69,6 @@ const SignUpPage = () => {
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -78,12 +108,26 @@ const SignUpPage = () => {
   };
 
   const handleOTPSuccess = (result: { user?: any; deviceTrusted?: boolean }) => {
+    console.log('🎉 OTP Success - Setting verification success state');
+    
     // Show success toast
     toast.success("Welcome! Your account has been verified successfully.", {
       description: result.deviceTrusted ? "This device has been marked as trusted." : undefined,
     });
-    // Let the AuthContext handle role-based redirect instead of hardcoded '/dashboard'
-    // The OTP verification in AuthContext should handle the redirect properly
+    
+    // Set persistent flag in sessionStorage to ensure success state persists
+    sessionStorage.setItem('signup-verification-success', 'true');
+    
+    // Set success state to show loading screen - this should prevent any form rendering
+    setVerificationSuccess(true);
+    console.log('✅ Verification success state set to true');
+    
+    // Don't clear OTP state immediately - let AuthContext handle it
+    // This prevents race conditions
+    console.log('⏳ Letting AuthContext handle OTP state clearing and redirect');
+    
+    // The AuthContext will handle the automatic signin and redirect
+    // No additional redirect needed here as AuthContext does it
   };
 
   const handleOTPCancel = () => {
@@ -103,10 +147,25 @@ const SignUpPage = () => {
 
   // Handle redirect when OTP is not required (signup completed successfully)
   useEffect(() => {
-    if (!isLoading && !otpRequired && !pendingEmail) {
-      // If we just completed signup without needing OTP, redirect to signin
+    // DISABLED: Let AuthContext handle all redirects after OTP verification
+    // This prevents interfering with the OTP verification flow
+    return;
+    
+    // Only redirect to signin if OTP was never required (non-signup flow)
+    // For signup with OTP, the AuthContext handles the redirect after verification
+    const pendingSignupData = localStorage.getItem('pending-signup');
+    console.log('🔍 Signup useEffect check:', {
+      isLoading,
+      otpRequired,
+      pendingEmail,
+      pendingSignupData: !!pendingSignupData,
+      hasJustSignedUp: !!localStorage.getItem('justSignedUp')
+    });
+    
+    if (!isLoading && !otpRequired && !pendingEmail && !pendingSignupData) {
       const hasJustSignedUp = localStorage.getItem('justSignedUp');
       if (hasJustSignedUp) {
+        console.log('🔄 Redirecting to signin (no OTP flow)');
         localStorage.removeItem('justSignedUp');
         toast.success("Account created successfully!", {
           description: "Please check your email to verify your account.",
@@ -116,13 +175,50 @@ const SignUpPage = () => {
     }
   }, [isLoading, otpRequired, pendingEmail, router]);
 
+  console.log('🔍 Signup render state:', {
+    verificationSuccess,
+    otpRequired,
+    pendingEmail: !!pendingEmail,
+    isLoading,
+    hasPersistentSuccess: typeof window !== 'undefined' ? sessionStorage.getItem('signup-verification-success') === 'true' : false,
+    otpFlowStarted
+  });
+
+  // Check if we should show success screen (either from state or sessionStorage)
+  const shouldShowSuccess = verificationSuccess || (typeof window !== 'undefined' && sessionStorage.getItem('signup-verification-success') === 'true');
+  
+  // Check if we should show OTP screen
+  const shouldShowOTP = otpRequired && pendingEmail;
+  
+  // Check if we should show signup form (only if no OTP flow has started and no success)
+  const shouldShowSignupForm = !shouldShowSuccess && !shouldShowOTP && !otpFlowStarted;
+
   return (
     <AuthLayout
       title="Join"
       subtitle="Start your journey to career excellence"
     >
-      {/* Show OTP Verification if required */}
-      {otpRequired && pendingEmail ? (
+      {/* Show success screen after verification */}
+      {shouldShowSuccess ? (
+        <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-elegant">
+          <CardContent className="p-8 text-center space-y-6">
+            <div className="w-16 h-16 mx-auto bg-success/10 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-success" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-poppins font-semibold text-foreground">Welcome to SkillSync!</h2>
+              <p className="text-muted-foreground font-inter mt-2">
+                Setting up your personalized learning experience...
+              </p>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="bg-accent h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : 
+      /* Show OTP Verification if required */
+      shouldShowOTP ? (
         <OTPVerification
           email={pendingEmail}
           purpose="signup"
@@ -131,7 +227,10 @@ const SignUpPage = () => {
           onCancel={handleOTPCancel}
           onResendOTP={handleOTPResend}
         />
-      ) : (
+      ) : 
+      /* Show signup form only if no OTP flow started */
+      shouldShowSignupForm ? (
+        /* Sign Up Card */
         /* Sign Up Card */
         <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-elegant">
           <CardHeader className="space-y-1 pb-6">
@@ -169,46 +268,6 @@ const SignUpPage = () => {
                   {errors.root.message}
                 </div>
               )}
-              
-              {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="font-inter font-medium">
-                    First Name
-                  </Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    placeholder="First name"
-                    className="border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
-                    {...register("firstName")}
-                    disabled={isSubmitting || isLoading}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-destructive font-inter">
-                      {errors.firstName.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="font-inter font-medium">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="lastName"
-                    type="text"
-                    placeholder="Last name"
-                    className="border-border focus:border-accent focus:ring-accent/20 transition-all duration-300"
-                    {...register("lastName")}
-                    disabled={isSubmitting || isLoading}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-destructive font-inter">
-                      {errors.lastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-inter font-medium">
@@ -313,6 +372,14 @@ const SignUpPage = () => {
                 Sign in
               </Link>
             </div>
+          </CardContent>
+        </Card>
+      ) : (
+        /* Loading fallback */
+        <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-elegant">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto"></div>
+            <p className="text-muted-foreground font-inter mt-4">Loading...</p>
           </CardContent>
         </Card>
       )}

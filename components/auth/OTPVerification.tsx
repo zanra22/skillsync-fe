@@ -130,8 +130,8 @@ const OTPVerification = ({
     setError('');
 
     try {
-      // Use AuthContext's verifyOTP for signin to handle post-login flow
-      if (purpose === 'signin') {
+      // Use AuthContext's verifyOTP for both signin and signup to handle post-verification flow
+      if (purpose === 'signin' || purpose === 'signup') {
         const result = await contextVerifyOTP(code, trustDevice);
         
         if (result.success) {
@@ -152,7 +152,7 @@ const OTPVerification = ({
           inputRefs.current[0]?.focus();
         }
       } else {
-        // For other purposes (signup, password_reset, etc.), use direct API call
+        // For other purposes (password_reset, device_verification), use direct API call
         const result = await otpApi.verifyOTP({
           code,
           email,

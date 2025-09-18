@@ -49,7 +49,20 @@ const SignInContent = () => {
       console.log('🔄 User already authenticated, redirecting...', user.role);
       setIsRedirecting(true);
       
-      const targetUrl = (user.role === 'super_admin' || user.role === 'admin') ? '/dashboard' : '/user-dashboard';
+      // Determine redirect URL based on user role and onboarding status
+      let targetUrl = '/user-dashboard'; // Default for regular users
+      
+      if (user.role === 'super_admin' || user.role === 'admin') {
+        targetUrl = '/dashboard';
+      } else if (user.role === 'new-user' || (user.profile && user.profile.onboarding_completed === false)) {
+        // New users or users who haven't completed onboarding should go to onboarding
+        targetUrl = '/onboarding';
+      } else {
+        // Established users go to user dashboard
+        targetUrl = '/user-dashboard';
+      }
+      
+      console.log('🎯 Redirecting to:', targetUrl, 'for role:', user.role);
       
       setTimeout(() => {
         window.location.href = targetUrl;
