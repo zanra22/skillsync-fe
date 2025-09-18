@@ -40,6 +40,7 @@ export default function AIConversationInterface({
   onTypingComplete
 }: AIConversationInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [typingMessages, setTypingMessages] = useState<Set<string>>(new Set());
 
@@ -47,6 +48,36 @@ export default function AIConversationInterface({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAITyping]);
+
+  // Auto-focus input when AI finishes typing and expects input
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    const aiJustFinishedTyping = lastMessage && 
+                                lastMessage.type === 'ai' && 
+                                !lastMessage.isTyping && 
+                                lastMessage.expectsInput &&
+                                !isAITyping &&
+                                !messages.some(m => m.type === 'ai' && m.showTypingAnimation && !typingMessages.has(m.id));
+    
+    if (aiJustFinishedTyping && inputRef.current) {
+      // Add a small delay to ensure rendering is complete
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [messages, isAITyping, typingMessages]);
+
+  // Focus input when typing completes
+  useEffect(() => {
+    if (!isAITyping && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.type === 'ai' && lastMessage?.expectsInput) {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 200);
+      }
+    }
+  }, [isAITyping, messages]);
 
   // Handle typing indicator
   useEffect(() => {
@@ -257,11 +288,13 @@ export default function AIConversationInterface({
         <form onSubmit={handleSendMessage} className="flex items-center space-x-3 max-w-none">
           <div className="flex-1 relative ml-48">
             <Input
+              ref={inputRef}
               value={currentInput}
               onChange={handleInputChange}
               placeholder={isAITyping ? "Ollie is thinking..." : placeholder}
               className="w-full pr-12 bg-input border-border focus:border-accent/50 focus:ring-2 focus:ring-accent/20 font-inter rounded-xl disabled:bg-muted disabled:cursor-not-allowed text-base py-3"
               disabled={isAITyping || typingMessages.size < messages.filter(m => m.type === 'ai' && m.showTypingAnimation).length}
+              autoFocus={false} // We'll handle focus manually
             />
             {isUserTyping && !isAITyping && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

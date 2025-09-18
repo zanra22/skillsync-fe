@@ -39,7 +39,7 @@ export const conversationSteps: Record<string, ConversationStep> = {
   welcome: {
     id: 'welcome',
     type: 'question',
-    aiMessage: "Hi there! 🦉 I'm your SkillSync AI assistant, and I'm excited to help you create a personalized learning journey! What should I call you?",
+    aiMessage: "Hi there! 🦉 I'm your SkillSync AI assistant, and I'm excited to help you create a personalized learning journey! What's your first name?",
     expectsInput: true,
     nextStep: 'role_discovery',
     dataField: 'firstName'
@@ -79,7 +79,7 @@ export const conversationSteps: Record<string, ConversationStep> = {
       "Other (I'll type it) ✏️"
     ],
     expectsInput: true,
-    nextStep: 'goals_exploration',
+    nextStep: 'goals_exploration', // Students skip experience level and go directly to goals
     dataField: 'industry'
   },
 
@@ -140,7 +140,7 @@ export const conversationSteps: Record<string, ConversationStep> = {
   experience_level: {
     id: 'experience_level',
     type: 'question',
-    aiMessage: "Perfect! Now, how would you describe your experience level in your current field?",
+    aiMessage: "Perfect! Now, how would you describe your professional experience level in your current field?",
     options: [
       "Just starting out (0-2 years) 🌱",
       "Getting comfortable (2-5 years) 📈",
@@ -179,7 +179,7 @@ export const conversationSteps: Record<string, ConversationStep> = {
   goals_exploration: {
     id: 'goals_exploration',
     type: 'question',
-    aiMessage: "Now for the exciting part! What specific skills would you like to develop or improve? Think about both technical skills relevant to your field and soft skills like communication, leadership, or problem-solving. Feel free to list a few!",
+    aiMessage: "Now for the exciting part! What's the ONE main skill you'd like to focus on developing? This could be a technical skill relevant to your field or a soft skill like communication or leadership. Please choose your top priority learning goal.",
     expectsInput: true,
     nextStep: 'goals_deep_dive',
     dataField: 'goals'
@@ -188,7 +188,7 @@ export const conversationSteps: Record<string, ConversationStep> = {
   goals_deep_dive: {
     id: 'goals_deep_dive',
     type: 'question',
-    aiMessage: "Those are excellent goals! What's your current skill level in your most important learning area?",
+    aiMessage: "That's an excellent goal! What's your current skill level in this learning area?",
     options: [
       "Complete beginner 🌱",
       "Some basics �",
@@ -362,10 +362,19 @@ export class ConversationManager {
         break;
 
       case 'role':
-        if (response.includes('student')) this.extractedData.role = 'student';
-        else if (response.includes('professional')) this.extractedData.role = 'professional';
-        else if (response.includes('change careers')) this.extractedData.role = 'career_changer';
-        else this.extractedData.role = 'other';
+        if (response.includes('student')) {
+          this.extractedData.role = 'student';
+          this.extractedData.careerStage = 'student'; // Use the correct Django choice value
+        } else if (response.includes('professional')) {
+          this.extractedData.role = 'professional';
+          // careerStage will be set in experience_level step
+        } else if (response.includes('change careers')) {
+          this.extractedData.role = 'career_changer';
+          // careerStage will be set in transition_timeline step as 'career_changer'
+        } else {
+          this.extractedData.role = 'other';
+          this.extractedData.careerStage = 'entry_level'; // Default for 'other' users
+        }
         break;
 
       case 'industry':
@@ -380,13 +389,13 @@ export class ConversationManager {
         break;
 
       case 'careerStage':
-        if (response.includes('0-2 years') || response.includes('starting')) this.extractedData.careerStage = 'junior';
-        else if (response.includes('2-5 years') || response.includes('comfortable')) this.extractedData.careerStage = 'mid';
-        else if (response.includes('5-10 years') || response.includes('experienced')) this.extractedData.careerStage = 'senior';
-        else if (response.includes('10+ years') || response.includes('expert')) this.extractedData.careerStage = 'expert';
-        else if (response.includes('actively')) this.extractedData.careerStage = 'immediate_transition';
-        else if (response.includes('6 months')) this.extractedData.careerStage = 'short_term_transition';
-        else if (response.includes('year')) this.extractedData.careerStage = 'long_term_transition';
+        if (response.includes('0-2 years') || response.includes('starting')) this.extractedData.careerStage = 'entry_level';
+        else if (response.includes('2-5 years') || response.includes('comfortable')) this.extractedData.careerStage = 'mid_level';
+        else if (response.includes('5-10 years') || response.includes('experienced')) this.extractedData.careerStage = 'senior_level';
+        else if (response.includes('10+ years') || response.includes('expert')) this.extractedData.careerStage = 'executive';
+        else if (response.includes('actively')) this.extractedData.careerStage = 'career_changer';
+        else if (response.includes('6 months')) this.extractedData.careerStage = 'career_changer';
+        else if (response.includes('year')) this.extractedData.careerStage = 'career_changer';
         break;
 
       case 'goals':

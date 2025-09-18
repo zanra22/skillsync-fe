@@ -177,8 +177,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Helper function to clear auth cookies
   const clearAuthCookies = () => {
     if (typeof document !== 'undefined') {
-      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict';
-      document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict';
+      // SECURITY: Don't use 'secure' flag in development (HTTP)
+      const isSecure = window.location.protocol === 'https:';
+      const secureFlag = isSecure ? '; secure' : '';
+      
+      // Clear frontend-set cookies
+      document.cookie = `auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}; samesite=strict`;
+      document.cookie = `user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}; samesite=strict`;
+      
+      console.log('🍪 Frontend auth cookies cleared:', isSecure ? 'with secure flag' : 'without secure flag (dev mode)');
     }
   };
 

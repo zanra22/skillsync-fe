@@ -1,6 +1,43 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Simple JWT payload parser (client-side safe, no verification)
+function parseJWTPayload(token: string): any {
+  try {
+    // Split the JWT and decode the payload (second part)
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    // Decode base64url
+    const payload = parts[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch (error) {
+    console.log('⚠️ Failed to parse JWT payload:', error);
+    return null;
+  }
+}
+
+// Extract role from JWT token securely
+function getRoleFromToken(token: string): string | null {
+  try {
+    const payload = parseJWTPayload(token);
+    if (!payload) return null;
+    
+    // Check if token is expired
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      console.log('⚠️ JWT token is expired');
+      return null;
+    }
+    
+    // Look for role in common JWT claim locations
+    return payload.role || payload.user_role || payload.scope || null;
+  } catch (error) {
+    console.log('⚠️ Error extracting role from token:', error);
+    return null;
+  }
+}
+
 // Define protected routes and their required roles
 const protectedRoutes = {
   '/dashboard': ['super_admin', 'admin'], // Admin dashboard - only for super_admin and admin
@@ -44,13 +81,27 @@ export function middleware(request: NextRequest) {
 
   // Get authentication token from cookies
   const authToken = request.cookies.get('auth-token')?.value;
-  const userRole = request.cookies.get('user-role')?.value;
+  const userRoleFromCookie = request.cookies.get('user-role')?.value;
   const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // SECURITY: Prioritize role from JWT token over cookie for consistency
+  let userRole = userRoleFromCookie; // Default to cookie value
+  let roleSource = 'cookie';
+  
+  if (authToken) {
+    const roleFromToken = getRoleFromToken(authToken);
+    if (roleFromToken) {
+      userRole = roleFromToken;
+      roleSource = 'jwt-token';
+    }
+  }
   
   console.log('🔍 Middleware Debug:', { 
     pathname, 
     authToken: !!authToken, 
     userRole,
+    roleSource,
+    userRoleFromCookie,
     hasAuthCookie: !!request.cookies.get('auth-token'),
     hasRoleCookie: !!request.cookies.get('user-role'),
     isDevelopment,

@@ -87,7 +87,7 @@ export default function OnboardingPage() {
         lastName: extractedData.lastName || '',
         bio: extractedData.bio || '',
         industry: extractedData.industry || '',
-        careerStage: extractedData.careerStage || 'mid',
+        careerStage: extractedData.careerStage || 'entry_level', // Use Django choice value
         goals: extractedData.goals || [],
         preferences: {
           learningStyle: extractedData.preferences?.learningStyle || 'mixed',
@@ -285,8 +285,42 @@ export default function OnboardingPage() {
         hasUser: !!result.user,
         userObject: result.user,
         userRole: result.user?.role,
+        hasAccessToken: !!result.access_token,
+        tokenExpiresIn: result.expires_in,
         fullResult: result
       });
+
+      // SECURITY: Handle fresh access token with updated role
+      if (result.access_token) {
+        console.log('🔒 Fresh access token received - updating authentication');
+        
+        // Store the fresh token securely (HttpOnly cookie will be set by backend)
+        // This access token contains the updated role for immediate use
+        console.log('🎯 New token expires in:', result.expires_in, 'seconds');
+        
+        // The backend has already set the secure HTTP-only cookies
+        // We don't need to manually set auth cookies - they're handled server-side
+        console.log('✅ Authentication refreshed with updated role');
+      } else {
+        console.log('⚠️ No fresh token received - using existing authentication');
+        
+        // SECURITY: Token refresh might have failed - check if we should force re-authentication
+        if (result.user?.role && result.user.role !== user?.role) {
+          console.log('🔒 Role mismatch detected - token refresh may have failed');
+          console.log(`🔄 Expected role: ${result.user.role}, Current role: ${user?.role}`);
+          
+          // In production, this could indicate a security issue
+          if (process.env.NODE_ENV !== 'development') {
+            console.warn('🚨 SECURITY: Role mismatch in production - forcing re-authentication');
+            
+            // Force re-authentication to get fresh tokens with correct role
+            window.location.href = '/signin?message=role-update-required&returnUrl=' + encodeURIComponent(window.location.pathname);
+            return;
+          } else {
+            console.log('🔧 Development mode: Continuing despite token refresh failure');
+          }
+        }
+      }
 
       // Update the user role cookie with the new role from backend
       if (result.user && result.user.role) {

@@ -412,6 +412,8 @@ export async function POST(request: NextRequest) {
                 skillsCovered
               }
             }
+            accessToken
+            expiresIn
           }
         }
       }
@@ -506,6 +508,14 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Onboarding completed successfully');
     
+    // Log token refresh information
+    if (onboardingResult.accessToken) {
+      console.log('🔒 Fresh access token received from backend');
+      console.log('⏰ Token expires in:', onboardingResult.expiresIn, 'seconds');
+    } else {
+      console.log('⚠️ No fresh token in backend response');
+    }
+    
     // Update the user-role cookie with the new role from the response
     const newUserRole = onboardingResult.user?.role || 'learner';
     console.log(`🍪 Updating user-role cookie to: ${newUserRole}`);
@@ -514,7 +524,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Onboarding completed successfully',
       user: onboardingResult.user,
-      roadmaps: onboardingResult.roadmaps
+      roadmaps: onboardingResult.roadmaps,
+      // Forward fresh access token from backend (HTTP-only cookies are already set)
+      access_token: onboardingResult.accessToken,
+      expires_in: onboardingResult.expiresIn
     });
     
     // Set the updated role cookie
@@ -525,6 +538,20 @@ export async function POST(request: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 7 days
     });
+    
+    // CRITICAL: Set the fresh auth-token cookie with updated role
+    if (onboardingResult.accessToken) {
+      console.log('🔒 Setting fresh auth-token cookie with updated role');
+      response.cookies.set('auth-token', onboardingResult.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: onboardingResult.expiresIn || 300 // Use backend expiry or default 5 min
+      });
+    } else {
+      console.log('⚠️ No fresh access token to set in cookie');
+    }
     
     return response;
 

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import AIConversationInterface, { ChatMessage } from './AIConversationInterface';
 import { ConversationManager, ExtractedData } from './ConversationManager';
+import DynamicLoadingScreen from './DynamicLoadingScreen';
 import { Sparkles } from 'lucide-react';
 
 interface ConversationalOnboardingProps {
@@ -119,24 +120,10 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
   };
 
   if (isSubmitting) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-auto">
-          <CardContent className="p-8 text-center space-y-6">
-            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto">
-              <Sparkles className="w-8 h-8 text-accent animate-pulse" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-poppins font-semibold">Creating Your Learning Journey</h3>
-              <p className="text-muted-foreground font-inter">
-                Our AI is crafting a personalized roadmap just for you...
-              </p>
-            </div>
-            <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <DynamicLoadingScreen onComplete={() => {
+      // This will be called when the loading animation completes
+      // The actual onComplete will be handled by the parent component
+    }} />;
   }
 
   return (

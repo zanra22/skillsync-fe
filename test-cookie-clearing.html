@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cookie Clearing Test</title>
+</head>
+<body>
+    <h1>Cookie Clearing Test</h1>
+    <div>
+        <h2>Current Cookies:</h2>
+        <pre id="cookies"></pre>
+    </div>
+    
+    <div>
+        <button onclick="setCookies()">Set Test Cookies</button>
+        <button onclick="clearCookiesDev()">Clear Cookies (Dev)</button>
+        <button onclick="clearCookiesProd()">Clear Cookies (Prod)</button>
+        <button onclick="showCookies()">Refresh Cookies</button>
+    </div>
+
+    <script>
+        function showCookies() {
+            document.getElementById('cookies').textContent = document.cookie || 'No cookies found';
+        }
+        
+        function setCookies() {
+            document.cookie = 'auth-token=test123; path=/; samesite=strict';
+            document.cookie = 'user-role=learner; path=/; samesite=strict';
+            showCookies();
+        }
+        
+        function clearCookiesDev() {
+            // Test development cookie clearing (no secure flag)
+            document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=strict';
+            document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=strict';
+            showCookies();
+        }
+        
+        function clearCookiesProd() {
+            // Test production cookie clearing (with secure flag)
+            document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict';
+            document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict';
+            showCookies();
+        }
+        
+        // Show cookies on load
+        showCookies();
+    </script>
+</body>
+</html>
