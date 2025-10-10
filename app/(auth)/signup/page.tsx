@@ -19,16 +19,52 @@ import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
 import PasswordInput from "@/components/auth/PasswordInput";
 import OTPVerification from "@/components/auth/OTPVerification";
 import { deviceUtils } from "@/api/auth/otp";
+import { getDashboardUrl } from "@/lib/auth-redirect";
 
 const SignUpPage = () => {
   const router = useRouter();
   
   // Use AuthContext for secure authentication
-  const { signup, isLoading, otpRequired, pendingEmail, verifyOTP, resendOTP, clearOTPState, deviceInfo } = useAuth();
+  const { signup, isLoading, otpRequired, pendingEmail, verifyOTP, resendOTP, clearOTPState, deviceInfo, isAuthenticated, user } = useAuth();
   
   // Add success state to prevent signup form flash
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [otpFlowStarted, setOtpFlowStarted] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  
+  // Debug logging for authentication state
+  useEffect(() => {
+    console.log('🔍 SignUp Page Auth State:', {
+      isAuthenticated,
+      hasUser: !!user,
+      userRole: user?.role,
+      otpRequired,
+      isLoading,
+      isRedirecting
+    });
+  }, [isAuthenticated, user, otpRequired, isLoading, isRedirecting]);
+  
+  // Redirect authenticated users immediately
+  useEffect(() => {
+    // Wait for loading to complete before checking
+    if (isLoading) {
+      console.log('⏳ Still loading auth state, waiting...');
+      return;
+    }
+    
+    if (isAuthenticated && user && !otpRequired) {
+      console.log('🔄 User already authenticated on signup page, redirecting...', user.role);
+      setIsRedirecting(true);
+      
+      // Use the centralized redirect utility
+      const targetUrl = getDashboardUrl(user);
+      console.log('🎯 Redirecting authenticated user to:', targetUrl);
+      
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 100);
+    }
+  }, [isAuthenticated, user, otpRequired, isLoading]);
   
   // Check for persistent verification success flag
   useEffect(() => {
@@ -191,7 +227,34 @@ const SignUpPage = () => {
   const shouldShowOTP = otpRequired && pendingEmail;
   
   // Check if we should show signup form (only if no OTP flow has started and no success)
-  const shouldShowSignupForm = !shouldShowSuccess && !shouldShowOTP && !otpFlowStarted;
+  const shouldShowSignupForm = !shouldShowSuccess && !shouldShowOTP && !otpFlowStarted && !isRedirecting;
+
+  // Show redirecting state for authenticated users
+  if (isRedirecting) {
+    return (
+      <AuthLayout
+        title="Already Signed In"
+        subtitle="Redirecting you to your dashboard"
+      >
+        <Card className="bg-card/95 backdrop-blur-sm border-border/50 shadow-elegant">
+          <CardContent className="p-8 text-center space-y-6">
+            <div className="w-16 h-16 mx-auto bg-accent/10 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-accent animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-poppins font-semibold text-foreground">You're already signed in!</h2>
+              <p className="text-muted-foreground font-inter mt-2">
+                Redirecting you to your dashboard...
+              </p>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="bg-accent h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+            </div>
+          </CardContent>
+        </Card>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout

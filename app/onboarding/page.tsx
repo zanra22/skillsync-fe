@@ -86,6 +86,7 @@ export default function OnboardingPage() {
         firstName: extractedData.firstName || '',
         lastName: extractedData.lastName || '',
         bio: extractedData.bio || '',
+        currentRole: extractedData.currentRole || '', // Current profession/role
         industry: extractedData.industry || '',
         careerStage: extractedData.careerStage || 'entry_level', // Use Django choice value
         goals: extractedData.goals || [],

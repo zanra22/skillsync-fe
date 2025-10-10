@@ -18,6 +18,7 @@ import OTPVerification from "@/components/auth/OTPVerification";
 import { deviceUtils } from "@/api/auth/otp";
 import { useEffect, Suspense, useState } from "react";
 import { toast } from "sonner";
+import { getDashboardUrl } from "@/lib/auth-redirect";
 
 const SignInContent = () => {
   const router = useRouter();
@@ -43,32 +44,40 @@ const SignInContent = () => {
   // Use AuthContext for secure authentication
   const { login, isLoading, otpRequired, pendingEmail, verifyOTP, resendOTP, clearOTPState, deviceInfo, isAuthenticated, user, isRedirecting: authIsRedirecting } = useAuth();
   
+  // Debug logging for authentication state
+  useEffect(() => {
+    console.log('🔍 SignIn Page Auth State:', {
+      isAuthenticated,
+      hasUser: !!user,
+      userRole: user?.role,
+      otpRequired,
+      isLoading,
+      isRedirecting,
+      authIsRedirecting
+    });
+  }, [isAuthenticated, user, otpRequired, isLoading, isRedirecting, authIsRedirecting]);
+  
   // Redirect authenticated users immediately
   useEffect(() => {
+    // Wait for loading to complete before checking
+    if (isLoading) {
+      console.log('⏳ Still loading auth state, waiting...');
+      return;
+    }
+    
     if (isAuthenticated && user && !otpRequired) {
       console.log('🔄 User already authenticated, redirecting...', user.role);
       setIsRedirecting(true);
       
-      // Determine redirect URL based on user role and onboarding status
-      let targetUrl = '/user-dashboard'; // Default for regular users
-      
-      if (user.role === 'super_admin' || user.role === 'admin') {
-        targetUrl = '/dashboard';
-      } else if (user.role === 'new-user' || (user.profile && user.profile.onboarding_completed === false)) {
-        // New users or users who haven't completed onboarding should go to onboarding
-        targetUrl = '/onboarding';
-      } else {
-        // Established users go to user dashboard
-        targetUrl = '/user-dashboard';
-      }
-      
+      // Use the centralized redirect utility
+      const targetUrl = getDashboardUrl(user);
       console.log('🎯 Redirecting to:', targetUrl, 'for role:', user.role);
       
       setTimeout(() => {
         window.location.href = targetUrl;
       }, 100);
     }
-  }, [isAuthenticated, user, otpRequired]);
+  }, [isAuthenticated, user, otpRequired, isLoading]);
   
   // React Hook Form with Zod validation
   const {

@@ -177,6 +177,7 @@ export const otpApi = {
               accountStatus
             }
             deviceTrusted
+            accessToken
           }
         }
       }
@@ -188,6 +189,7 @@ export const otpApi = {
         email: data.email,
         purpose: data.purpose,
         trustDevice: data.trustDevice || false,
+        rememberMe: data.rememberMe || false, // Pass Remember Me flag to backend
       },
       deviceInfo: data.deviceInfo ? {
         userAgent: data.deviceInfo.userAgent,
@@ -196,6 +198,8 @@ export const otpApi = {
       } : undefined,
     };
 
+    console.log('🔍 OTP API - verifyOTP variables:', JSON.stringify(variables, null, 2));
+
     const result = await otpGraphqlClient<{
       otps: {
         verifyOtp: {
@@ -203,6 +207,7 @@ export const otpApi = {
           message: string;
           user?: any;
           deviceTrusted: boolean;
+          accessToken?: string;
         };
       };
     }>(mutation, variables);
@@ -216,6 +221,7 @@ export const otpApi = {
       message: result.otps.verifyOtp.message,
       user: result.otps.verifyOtp.user,
       deviceTrusted: result.otps.verifyOtp.deviceTrusted,
+      accessToken: result.otps.verifyOtp.accessToken,
     };
   },
 

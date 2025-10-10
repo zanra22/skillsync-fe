@@ -8,16 +8,19 @@ export interface ConversationStep {
   aiMessage: string;
   options?: string[];
   expectsInput: boolean;
+  enableTextInputOnOther?: boolean; // Enable text input when "Other" is selected
   nextStep?: string | ((response: string) => string);
   dataField?: string; // Which field in onboarding data this maps to
   validation?: (response: string) => boolean;
   errorMessage?: string;
+  placeholder?: string; // Custom placeholder for input field
 }
 
 export interface ExtractedData {
   firstName?: string;
   lastName?: string;
   role?: string;
+  currentRole?: string; // Current profession/role for working professionals and career shifters
   industry?: string;
   careerStage?: string;
   goals?: Array<{
@@ -39,10 +42,11 @@ export const conversationSteps: Record<string, ConversationStep> = {
   welcome: {
     id: 'welcome',
     type: 'question',
-    aiMessage: "Hi there! 🦉 I'm your SkillSync AI assistant, and I'm excited to help you create a personalized learning journey! What's your first name?",
+    aiMessage: "Hi there! I'm your SkillSync AI assistant, Ollie. I will be helping you create a personalized learning journey. Before we start, can I ask your name?",
     expectsInput: true,
     nextStep: 'role_discovery',
-    dataField: 'firstName'
+    dataField: 'firstName',
+    placeholder: "Enter your First Name"
   },
 
   role_discovery: {
@@ -52,17 +56,26 @@ export const conversationSteps: Record<string, ConversationStep> = {
     options: [
       "I'm a student 📚",
       "I'm a working professional 💼", 
-      "I'm looking to change careers 🔄",
-      "I'm between jobs/other 🤔"
+      "I'm looking to change careers 🔄"
     ],
     expectsInput: false,
     nextStep: (response: string) => {
       if (response.includes('student')) return 'student_path';
-      if (response.includes('professional')) return 'professional_path';
-      if (response.includes('change careers')) return 'career_changer_path';
-      return 'other_path';
+      if (response.includes('professional')) return 'current_profession';
+      if (response.includes('change careers')) return 'current_profession';
+      return 'student_path'; // Default fallback
     },
     dataField: 'role'
+  },
+
+  current_profession: {
+    id: 'current_profession',
+    type: 'question',
+    aiMessage: "Wonderful! If you don't mind me asking, may I ask what is your current profession/role? This would help us better create personalized outputs for you.",
+    expectsInput: true,
+    nextStep: '', // Handled by special routing logic
+    dataField: 'currentRole',
+    placeholder: "e.g., Software Engineer, Marketing Manager, Teacher"
   },
 
   student_path: {
@@ -78,13 +91,15 @@ export const conversationSteps: Record<string, ConversationStep> = {
       "Healthcare & Medicine 🏥",
       "Other (I'll type it) ✏️"
     ],
-    expectsInput: true,
-    nextStep: 'goals_exploration', // Students skip experience level and go directly to goals
+    expectsInput: false,
+    enableTextInputOnOther: true,
+    placeholder: "Type your specific field or industry...",
+    nextStep: 'goals_exploration',
     dataField: 'industry'
   },
 
-  professional_path: {
-    id: 'professional_path',
+  professional_industry: {
+    id: 'professional_industry',
     type: 'question',
     aiMessage: "Awesome! Continuous learning is key to professional growth. What field or industry do you want to develop skills in? This could be to advance in your current field or transition to something new!",
     options: [
@@ -96,13 +111,15 @@ export const conversationSteps: Record<string, ConversationStep> = {
       "Leadership & Management 👥",
       "Other (I'll type it) ✏️"
     ],
-    expectsInput: true,
+    expectsInput: false,
+    enableTextInputOnOther: true,
+    placeholder: "Type your specific field or industry...",
     nextStep: 'experience_level',
     dataField: 'industry'
   },
 
-  career_changer_path: {
-    id: 'career_changer_path',
+  career_changer_industry: {
+    id: 'career_changer_industry',
     type: 'question',
     aiMessage: "That's exciting - career changes can be incredibly rewarding! What field are you looking to transition into? This will help me tailor your learning path for your new career goals.",
     options: [
@@ -114,26 +131,10 @@ export const conversationSteps: Record<string, ConversationStep> = {
       "Cybersecurity 🔒",
       "Other (I'll type it) ✏️"
     ],
-    expectsInput: true,
+    expectsInput: false,
+    enableTextInputOnOther: true,
+    placeholder: "Type your specific field or industry...",
     nextStep: 'transition_timeline',
-    dataField: 'industry'
-  },
-
-  other_path: {
-    id: 'other_path',
-    type: 'question',
-    aiMessage: "No worries! Everyone's journey is unique. What area or industry interests you most for skill development? This could be anything from technology and creative fields to business or personal development.",
-    options: [
-      "Software Development 💻",
-      "Creative Arts & Design 🎨",
-      "Business & Entrepreneurship 💼",
-      "Health & Wellness 🌱",
-      "Education & Training 📚",
-      "Personal Development 🚀",
-      "Other (I'll type it) ✏️"
-    ],
-    expectsInput: true,
-    nextStep: 'goals_exploration',
     dataField: 'industry'
   },
 
@@ -179,10 +180,11 @@ export const conversationSteps: Record<string, ConversationStep> = {
   goals_exploration: {
     id: 'goals_exploration',
     type: 'question',
-    aiMessage: "Now for the exciting part! What's the ONE main skill you'd like to focus on developing? This could be a technical skill relevant to your field or a soft skill like communication or leadership. Please choose your top priority learning goal.",
+    aiMessage: "Now for the exciting part! What skill would you like to focus on in {industry}? You can describe your learning goal in detail - I'd love to understand exactly what you want to achieve!",
     expectsInput: true,
     nextStep: 'goals_deep_dive',
-    dataField: 'goals'
+    dataField: 'goals',
+    placeholder: "Tell me about your learning goals in detail..."
   },
 
   goals_deep_dive: {
@@ -312,8 +314,101 @@ export class ConversationManager {
     return { isValid: true, normalizedValue: input.trim() };
   }
 
+  // Smart skill name extraction from natural language responses
+  private extractSkillNameFromText(text: string): string {
+    const normalizedText = text.toLowerCase().trim();
+    
+    // Common skill keywords to identify main skills
+    const skillKeywords = [
+      // Programming & Development
+      'react', 'javascript', 'python', 'java', 'web development', 'app development',
+      'frontend', 'backend', 'full stack', 'mobile development', 'ios', 'android',
+      'node.js', 'typescript', 'css', 'html', 'vue', 'angular',
+      
+      // Data & Analytics
+      'data science', 'machine learning', 'ai', 'artificial intelligence', 'analytics',
+      'sql', 'excel', 'tableau', 'power bi', 'statistics', 'data analysis',
+      
+      // Design & Creative
+      'ui design', 'ux design', 'graphic design', 'figma', 'photoshop', 'illustrator',
+      'web design', 'user experience', 'user interface', 'visual design',
+      
+      // Business & Soft Skills
+      'project management', 'leadership', 'communication', 'public speaking',
+      'presentation', 'team management', 'agile', 'scrum', 'marketing',
+      'social media marketing', 'digital marketing', 'content marketing',
+      
+      // Other Technical
+      'cloud computing', 'aws', 'azure', 'cybersecurity', 'devops', 'automation',
+      'blockchain', 'cryptocurrency', 'network security'
+    ];
+    
+    // Find matching skills in the text (prioritize longer matches)
+    const sortedSkills = skillKeywords.sort((a, b) => b.length - a.length);
+    
+    for (const skill of sortedSkills) {
+      if (normalizedText.includes(skill)) {
+        // Capitalize properly
+        return skill.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+      }
+    }
+    
+    // If no specific skill found, try to extract the main topic
+    // Look for patterns like "I want to learn X" or "focus on X"
+    const patterns = [
+      /(?:learn|study|focus on|improve|develop|master)\s+([^,.!?]+)/i,
+      /(?:become better at|get better at|improve my)\s+([^,.!?]+)/i,
+      /(?:skill in|skills in|experience in)\s+([^,.!?]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        const extractedSkill = match[1].trim();
+        // Clean up common words
+        const cleanedSkill = extractedSkill
+          .replace(/\b(and|or|the|a|an|my|in|with|for|to)\b/gi, '')
+          .trim();
+        
+        if (cleanedSkill.length > 2) {
+          return cleanedSkill.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        }
+      }
+    }
+    
+    // Last resort: take the first meaningful words
+    const words = text.split(' ').filter(word => 
+      word.length > 2 && !/^(i|want|to|learn|study|the|a|an|and|or|but|so|very|really|just)$/i.test(word)
+    );
+    
+    if (words.length > 0) {
+      const skillName = words.slice(0, 3).join(' '); // Take first 3 meaningful words
+      return skillName.charAt(0).toUpperCase() + skillName.slice(1).toLowerCase();
+    }
+    
+    // Absolute fallback
+    return text.split(' ').slice(0, 2).join(' ').trim() || 'General Skills';
+  }
+
   getCurrentStep(): ConversationStep {
     return conversationSteps[this.currentStep];
+  }
+
+  // Get dynamic placeholder based on current step and context
+  getCurrentPlaceholder(): string {
+    const step = this.getCurrentStep();
+    
+    // For goals exploration, provide industry-specific placeholder
+    if (step.id === 'goals_exploration') {
+      return this.getIndustrySpecificPlaceholder();
+    }
+    
+    // Return default placeholder
+    return step.placeholder || "Type your response...";
   }
 
   getMessages(): ChatMessage[] {
@@ -377,15 +472,14 @@ export class ConversationManager {
         }
         break;
 
+      case 'currentRole':
+        // Store the user's current profession/role
+        this.extractedData.currentRole = response.trim();
+        break;
+
       case 'industry':
-        // Validate industry input
-        const validation = this.validateIndustry(response);
-        if (validation.isValid) {
-          this.extractedData.industry = validation.normalizedValue || response.trim();
-        } else {
-          // Invalid input - we'll handle this in processUserResponse
-          this.extractedData.industry = response.trim(); // Store for retry logic
-        }
+        // Store the industry response (whether it's a predefined option or custom text)
+        this.extractedData.industry = response.trim();
         break;
 
       case 'careerStage':
@@ -399,10 +493,12 @@ export class ConversationManager {
         break;
 
       case 'goals':
-        // Parse goals from natural language
+        // Enhanced goals parsing for paragraph responses
         const goalText = response.trim();
+        const skillName = this.extractSkillNameFromText(goalText);
+        
         this.extractedData.goals = [{
-          skillName: goalText.split(',')[0].trim(), // Take first mentioned skill as primary
+          skillName: skillName,
           description: goalText,
           targetSkillLevel: 'intermediate', // Default, will be updated later
           priority: 1
@@ -450,11 +546,38 @@ export class ConversationManager {
     
     // Personalize messages with user's name
     if (this.extractedData.firstName) {
-      message = message.replace(/Hi there!/g, `Hi ${this.extractedData.firstName}!`);
+      message = message.replace(/Nice to meet you!/g, `Nice to meet you, ${this.extractedData.firstName}!`);
       message = message.replace(/Perfect!/g, `Perfect, ${this.extractedData.firstName}!`);
+      message = message.replace(/Wonderful!/g, `Wonderful, ${this.extractedData.firstName}!`);
+    }
+
+    // Personalize industry-specific questions
+    if (this.extractedData.industry) {
+      message = message.replace(/{industry}/g, this.extractedData.industry);
     }
 
     return message;
+  }
+
+  // Generate industry-specific placeholder text for goals exploration
+  private getIndustrySpecificPlaceholder(): string {
+    const industry = this.extractedData?.industry?.toLowerCase() || '';
+    
+    if (industry.includes('software') || industry.includes('development') || industry.includes('programming')) {
+      return "e.g., Master React and TypeScript for full-stack web development, Learn Python for backend APIs and data processing...";
+    } else if (industry.includes('data') || industry.includes('analytics') || industry.includes('science')) {
+      return "e.g., Learn machine learning algorithms for predictive modeling, Master SQL and data visualization with Python...";
+    } else if (industry.includes('marketing') || industry.includes('digital')) {
+      return "e.g., Master Google Ads and SEO optimization, Learn social media strategy and content creation...";
+    } else if (industry.includes('design') || industry.includes('ux') || industry.includes('ui')) {
+      return "e.g., Learn user research methods and prototyping, Master Figma for responsive web design...";
+    } else if (industry.includes('business') || industry.includes('management') || industry.includes('finance')) {
+      return "e.g., Develop leadership and team management skills, Learn financial analysis and strategic planning...";
+    } else if (industry.includes('healthcare') || industry.includes('medical')) {
+      return "e.g., Learn medical data analysis and healthcare informatics, Develop patient communication and care skills...";
+    } else {
+      return "e.g., Describe your specific learning goals and what you want to achieve in your field...";
+    }
   }
 
   processUserResponse(response: string): { hasNext: boolean; isComplete: boolean } {
@@ -463,8 +586,8 @@ export class ConversationManager {
     // Add user message to history
     this.addUserMessage(response);
 
-    // Special handling for industry validation
-    if (currentStep.dataField === 'industry') {
+    // Special handling for industry validation (only for predefined options)
+    if (currentStep?.dataField === 'industry' && !response.includes("Other")) {
       const validation = this.validateIndustry(response);
       if (!validation.isValid) {
         // Industry input is invalid, ask for clarification
@@ -483,14 +606,25 @@ export class ConversationManager {
     }
 
     // Extract data from response
-    this.extractDataFromResponse(response, currentStep);
+    this.extractDataFromResponse(response, currentStep!);
 
-    // Determine next step
+    // Special routing logic for current_profession step
     let nextStepId: string;
-    if (typeof currentStep.nextStep === 'function') {
-      nextStepId = currentStep.nextStep(response);
+    if (currentStep.id === 'current_profession') {
+      if (this.extractedData.role === 'professional') {
+        nextStepId = 'professional_industry';
+      } else if (this.extractedData.role === 'career_changer') {
+        nextStepId = 'career_changer_industry';
+      } else {
+        nextStepId = 'professional_industry'; // Default
+      }
     } else {
-      nextStepId = currentStep.nextStep || '';
+      // Standard routing - use nextStep
+      if (typeof currentStep.nextStep === 'function') {
+        nextStepId = currentStep.nextStep(response);
+      } else {
+        nextStepId = currentStep.nextStep || '';
+      }
     }
 
     // If we have a next step, proceed

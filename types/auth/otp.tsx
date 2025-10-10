@@ -28,6 +28,7 @@ export interface VerifyOTPRequestDto {
   purpose: 'signin' | 'signup' | 'password_reset' | 'device_verification';
   deviceInfo: DeviceInfoDto;
   trustDevice?: boolean;
+  rememberMe?: boolean; // For signin OTP: session vs persistent cookies
 }
 
 export interface VerifyOTPResponseDto {
@@ -41,6 +42,7 @@ export interface VerifyOTPResponseDto {
     accountStatus: 'pending' | 'active';
   };
   deviceTrusted?: boolean;
+  accessToken?: string; // Access token returned for signin purpose
 }
 
 // Verify Email Link Request

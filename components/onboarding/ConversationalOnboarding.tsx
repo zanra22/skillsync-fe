@@ -20,6 +20,7 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
   const [isAITyping, setIsAITyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [awaitingInput, setAwaitingInput] = useState(false);
+  const [isOtherSelected, setIsOtherSelected] = useState(false); // Track when Other is selected
 
   // Initialize messages on mount
   useEffect(() => {
@@ -27,6 +28,9 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
   }, [conversationManager]);
 
   const handleSendMessage = async (message: string) => {
+    // Reset "Other" selection state when sending a message
+    setIsOtherSelected(false);
+    
     // Immediately disable input
     setAwaitingInput(false);
     
@@ -113,6 +117,12 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
     await handleSendMessage(option);
   };
 
+  const handleOtherSelected = () => {
+    // When "Other" is selected, enable text input for custom industry
+    setIsOtherSelected(true);
+    setAwaitingInput(true);
+  };
+
   const handleTypingComplete = (messageId: string) => {
     // Enable input after AI typing animation completes
     setIsAITyping(false);
@@ -149,10 +159,15 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
               messages={messages}
               onSendMessage={handleSendMessage}
               onSelectOption={handleSelectOption}
+              onOtherSelected={handleOtherSelected}
               isAITyping={isAITyping}
               currentInput={currentInput}
               setCurrentInput={setCurrentInput}
               onTypingComplete={handleTypingComplete}
+              expectsInput={!isComplete && awaitingInput && (
+                conversationManager.getCurrentStep()?.expectsInput !== false || 
+                (conversationManager.getCurrentStep()?.enableTextInputOnOther && isOtherSelected)
+              )}
               placeholder={
                 isComplete 
                   ? "Conversation complete! Generating your roadmap..." 
@@ -160,7 +175,9 @@ export default function ConversationalOnboarding({ onComplete, isSubmitting = fa
                     ? "Wait for SkillSync to respond..." 
                     : !awaitingInput
                       ? "Please wait for the AI to finish..."
-                      : "Type your response..."
+                      : isOtherSelected && conversationManager.getCurrentStep()?.placeholder
+                        ? conversationManager.getCurrentStep()?.placeholder
+                        : conversationManager.getCurrentPlaceholder()
               }
             />
           </Card>

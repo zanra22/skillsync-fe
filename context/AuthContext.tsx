@@ -176,17 +176,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Helper function to clear auth cookies
   const clearAuthCookies = () => {
-    if (typeof document !== 'undefined') {
-      // SECURITY: Don't use 'secure' flag in development (HTTP)
-      const isSecure = window.location.protocol === 'https:';
-      const secureFlag = isSecure ? '; secure' : '';
-      
-      // Clear frontend-set cookies
-      document.cookie = `auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}; samesite=strict`;
-      document.cookie = `user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}; samesite=strict`;
-      
-      console.log('🍪 Frontend auth cookies cleared:', isSecure ? 'with secure flag' : 'without secure flag (dev mode)');
-    }
+    // ✅ SECURITY: Backend handles all cookie clearing via SecureTokenManager
+    // Frontend no longer sets or clears auth cookies manually
+    console.log('🔐 Cookie clearing handled by backend (secure)');
   };
 
   // Initialize device info on mount
@@ -223,6 +215,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkExistingSession = async () => {
     try {
       console.log('🔍 Checking for existing session...');
+      
+      // ✅ SECURITY: Use ONLY HTTP-only refresh_token cookie (backend-managed)
+      // No longer check frontend auth-token cookie
+      console.log('🔐 Attempting session restore via HTTP-only refresh token...');
       
       // In development, try to restore from dev helper first
       const devState = devAuthHelper.restore();
@@ -265,7 +261,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
               // Save to dev helper for hot reload persistence
               devAuthHelper.save(true, userProfile.role);
               
-              console.log('👤 User profile loaded:', userProfile.role);
+              console.log('👤 User profile loaded successfully:', {
+                role: userProfile.role,
+                email: userProfile.email,
+                isAuthenticated: true
+              });
               return; // Success, exit retry loop
               
             } catch (profileError) {
@@ -304,12 +304,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // No session found after all retries
       if (devAuthHelper.isDevelopment()) {
-        console.log('🔧 No valid session - relying on dev mode bypass');
+        console.log('🔧 No valid session - user is not authenticated');
       } else {
-        console.log('ℹ️ No existing session found');
+        console.log('ℹ️ No existing session found - user needs to sign in');
       }
       devAuthHelper.clear();
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+      setAuthState(prev => ({ 
+        ...prev, 
+        isLoading: false,
+        isAuthenticated: false,
+        user: null
+      }));
       
     } catch (error) {
       console.error('❌ Session check failed:', error);
@@ -391,12 +396,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log('✅ No OTP required, completing login...');
         const expiresAt = Date.now() + (credentialValidation.tokens.expiresIn * 1000);
 
-        // Set auth cookies for middleware
-        console.log('🍪 Setting auth cookies...');
-        const isSecure = window.location.protocol === 'https:';
-        const secureFlag = isSecure ? '; secure' : '';
-        document.cookie = `auth-token=${credentialValidation.tokens.accessToken}; path=/; max-age=${credentialValidation.tokens.expiresIn}${secureFlag}; samesite=strict`;
-        document.cookie = `user-role=${credentialValidation.user.role ?? 'new-user'}; path=/; max-age=${credentialValidation.tokens.expiresIn}${secureFlag}; samesite=strict`;
+        // ✅ SECURITY: Store accessToken ONLY in memory (React state)
+        // Backend already set HTTP-only refresh_token cookie
+        console.log('🔐 Storing access token in memory only (secure)');
 
         setAuthState(prev => ({
           ...prev,
@@ -472,20 +474,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = async () => {
+    console.log('🚪 Logout initiated from AuthContext...');
+    
     try {
-      await authApi.signOut();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear auth cookies
-      clearAuthCookies();
+      console.log('� Calling backend logout API...');
       
-      // Clear session storage
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.removeItem('pending-login');
-        sessionStorage.removeItem('pending-signup');
-      }
-
+      // Call backend logout mutation to clear HTTP-only cookies
+      await authApi.signOut();
+      
+      console.log('✅ Backend logout API completed successfully');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Continue with cleanup even if backend call fails
+    } finally {
+      console.log('🧹 Clearing AuthContext state...');
+      
+      // Clear all auth state
       setAuthState({
         user: null,
         accessToken: null,
@@ -499,9 +503,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isRedirecting: false,
       });
 
-      // Redirect to home page
+      console.log('✅ Auth state cleared');
+
+      // Force a full page reload to clear all state and allow middleware to see cleared cookies
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        console.log('🔄 Forcing full page reload to signin...');
+        // Use replace to prevent back button from showing authenticated state
+        window.location.replace('/signin');
       }
     }
   };
@@ -631,12 +639,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
+      // Retrieve remember_me from sessionStorage for signin purpose
+      let rememberMe = false;
+      if (authState.pendingPurpose === 'signin') {
+        try {
+          const pendingLogin = sessionStorage.getItem('pending-login');
+          console.log('🔍 Raw pending-login data:', pendingLogin);
+          if (pendingLogin) {
+            const loginData = JSON.parse(pendingLogin);
+            rememberMe = loginData.rememberMe || false;
+            console.log('📝 Retrieved rememberMe from pending login:', rememberMe, 'Type:', typeof rememberMe);
+            console.log('📦 Full login data:', loginData);
+          } else {
+            console.warn('⚠️ No pending-login data found in sessionStorage');
+          }
+        } catch (error) {
+          console.error('❌ Error reading pending-login data:', error);
+        }
+      }
+
+      console.log('🚀 Calling verifyOTP with rememberMe:', rememberMe);
+
       const response = await otpApi.verifyOTP({
         code: otpCode,
         email: authState.pendingEmail,
         purpose: authState.pendingPurpose,
         deviceInfo: authState.deviceInfo,
         trustDevice: trustDevice || authState.pendingPurpose === 'signup', // Auto-trust device for signup
+        rememberMe: rememberMe, // Pass rememberMe to backend for cookie duration
       });
 
       console.log('✅ OTP API response:', response);
@@ -651,78 +681,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
           pendingPurpose: null,
         }));
 
-        console.log('🧹 OTP state cleared, processing signin...');
+        console.log('🧹 OTP state cleared');
 
         // Handle post-OTP login for signin purpose
-        if (authState.pendingPurpose === 'signin') {
-          console.log('🔄 Processing post-OTP signin...');
-          const pendingLogin = sessionStorage.getItem('pending-login');
-          console.log('📦 Pending login data:', pendingLogin);
+        if (authState.pendingPurpose === 'signin' && response.accessToken) {
+          console.log('🔄 Processing post-OTP signin with access token from backend...');
           
-          if (pendingLogin) {
-            const { email, password, rememberMe } = JSON.parse(pendingLogin);
-            sessionStorage.removeItem('pending-login');
-            
-            console.log('🔑 Completing login process...');
-            // Complete the login process
-            const loginResponse = await authApi.signIn({
-              email,
-              password,
-              rememberMe,
-            });
+          // ✅ Backend already returned access token and set HTTP-only cookies
+          // No need to call signin again - just store the access token in memory
+          const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes (default access token lifetime)
 
-            console.log('✅ Login response:', loginResponse);
-            const expiresAt = Date.now() + (loginResponse.tokens.expiresIn * 1000);
+          // ✅ SECURITY: Store accessToken ONLY in memory (React state)
+          // Backend already set HTTP-only refresh_token cookie during OTP verification
+          console.log('🔐 Storing access token in memory only (secure)');
 
-            // Set auth cookies for middleware
-            console.log('🍪 Setting auth cookies...');
-            const isSecure = window.location.protocol === 'https:';
-            const secureFlag = isSecure ? '; secure' : '';
-            const cookieOptions = `path=/; max-age=${loginResponse.tokens.expiresIn}${secureFlag}; samesite=strict`;
-            
-            document.cookie = `auth-token=${loginResponse.tokens.accessToken}; ${cookieOptions}`;
-            document.cookie = `user-role=${loginResponse.user.role ?? 'new-user'}; ${cookieOptions}`;
-            
-            console.log('🍪 Auth cookies set:', {
-              token: !!loginResponse.tokens.accessToken,
-              role: loginResponse.user.role ?? 'new-user'
-            });
+          setAuthState(prev => ({
+            ...prev,
+            user: response.user as any, // Backend returns simplified user from OTP, will fetch full user data later
+            accessToken: response.accessToken || null,
+            isAuthenticated: true,
+            isLoading: false,
+            tokenExpiresAt: expiresAt,
+            isRedirecting: true,
+          }));
 
-            setAuthState(prev => ({
-              ...prev,
-              user: loginResponse.user,
-              accessToken: loginResponse.tokens.accessToken,
-              isAuthenticated: true,
-              isLoading: false,
-              tokenExpiresAt: expiresAt,
-              isRedirecting: true, // Set redirecting immediately
-            }));
+          console.log('✅ Auth state updated:', {
+            user: response.user,
+            role: response.user?.role,
+            isAuthenticated: true
+          });
 
-            console.log('✅ Auth state updated:', {
-              user: loginResponse.user,
-              role: loginResponse.user.role,
-              isAuthenticated: true
-            });
+          // Show success toast for OTP-verified login
+          if (typeof window !== 'undefined') {
+            const { toast } = await import('sonner');
+            toast.success("Signed in successfully!");
+          }
 
-            // Show success toast for OTP-verified login
-            if (typeof window !== 'undefined') {
-              const { toast } = await import('sonner');
-              toast.success("Signed in successfully!");
-            }
+          // Clean up pending login data
+          sessionStorage.removeItem('pending-login');
 
-            console.log('🚀 Redirecting based on role:', loginResponse.user.role);
-            // Role-based redirect
+          console.log('🚀 Redirecting based on role:', response.user?.role);
+          // Role-based redirect
+          if (response.user) {
             try {
-              redirectBasedOnRole(loginResponse.user);
+              redirectBasedOnRole(response.user);
             } catch (redirectError) {
               console.error('❌ Redirect error:', redirectError);
-            }
-          } else {
-            console.log('❌ No pending login data found');
-            // If no pending login, still redirect based on user role if we have it
-            if (response.user?.role) {
-              console.log('🔄 Attempting redirect with OTP response user:', response.user.role);
-              redirectBasedOnRole(response.user);
             }
           }
         }
@@ -755,19 +759,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
               console.log('✅ Signup authentication response:', loginResponse);
               const expiresAt = Date.now() + (loginResponse.tokens.expiresIn * 1000);
 
-              // Set auth cookies for middleware
-              console.log('🍪 Setting auth cookies for new user...');
-              const isSecure = window.location.protocol === 'https:';
-              const secureFlag = isSecure ? '; secure' : '';
-              const cookieOptions = `path=/; max-age=${loginResponse.tokens.expiresIn}${secureFlag}; samesite=strict`;
-              
-              document.cookie = `auth-token=${loginResponse.tokens.accessToken}; ${cookieOptions}`;
-              document.cookie = `user-role=${loginResponse.user.role ?? 'new-user'}; ${cookieOptions}`;
-              
-              console.log('🍪 Auth cookies set for new user:', {
-                token: !!loginResponse.tokens.accessToken,
-                role: loginResponse.user.role ?? 'new-user'
-              });
+              // ✅ SECURITY: Store accessToken ONLY in memory (React state)
+              // Backend already set HTTP-only refresh_token cookie
+              console.log('🔐 Storing access token in memory only (secure)');
 
               setAuthState(prev => ({
                 ...prev,

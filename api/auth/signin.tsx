@@ -238,8 +238,11 @@ export const authApi = {
       }
     `;
 
+    console.log('🚪 Calling logout mutation...');
+    
     try {
-      await graphqlClient<{
+      // Call backend to clear HTTP-only cookies
+      const result = await graphqlClient<{
         auth: {
           logout: {
             success: boolean;
@@ -247,11 +250,30 @@ export const authApi = {
           };
         };
       }>(mutation);
-    } finally {
-      // Clear tokens even if API call fails
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("tokenExpiry");
+      
+      console.log('✅ Logout mutation response:', result);
+      
+      // Note: Backend now always clears cookies, even if user not authenticated
+      // So success=true or success=false, cookies should be cleared
+      if (result.auth.logout.success) {
+        console.log('✅ Logout successful:', result.auth.logout.message);
+      } else {
+        console.log('⚠️ Logout returned success=false (cookies still cleared):', result.auth.logout.message);
+      }
+    } catch (error) {
+      console.error('❌ Logout mutation failed:', error);
+      // Continue with cleanup even if backend call fails
     }
+    
+    // ✅ SECURITY: No localStorage/sessionStorage for auth tokens
+    // All auth data is in HTTP-only cookies (backend clears them)
+    // Just clear any pending signup/login data
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('pending-login');
+      sessionStorage.removeItem('pending-signup');
+    }
+    
+    console.log('🧹 Logout API cleanup complete');
   },
 
   // Refresh access token
@@ -387,40 +409,39 @@ export const authApi = {
   // Get current user profile
   getProfile: async (accessToken?: string): Promise<SignInResponseDto["user"]> => {
     const query = `
-      query GetUsers {
-        users {
-          users {
+      query GetCurrentUser {
+        auth {
+          me {
             id
             email
             username
             role
             accountStatus
             isPremium
+            firstName
+            lastName
           }
         }
       }
     `;
 
     const result = await graphqlClient<{
-      users: {
-        users: any[];
+      auth: {
+        me: any;
       };
     }>(query, {}, accessToken);
 
-    const users = result.users.users;
+    const user = result.auth.me;
 
-    if (!users || users.length === 0) {
-      throw new ApiError(404, "No users found");
+    if (!user) {
+      throw new ApiError(404, "User not found or not authenticated");
     }
-
-    // For now, we'll return the first user - in a real app, you'd identify the current user
-    const user = users[0];
 
     return {
       id: user.id,
       email: user.email,
-      firstName: user.username,
-      lastName: "",
+      firstName: user.firstName || user.username,
+      lastName: user.lastName || "",
       avatar: undefined,
       emailVerified: user.accountStatus === "active",
       role: user.role, // Use the actual role from backend

@@ -5,6 +5,7 @@ import { onError } from '@apollo/client/link/error';
 // HTTP link for GraphQL endpoint
 const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "https://skillsync-graphql-e2dpdxhgebeqhhhk.southeastasia-01.azurewebsites.net",
+  credentials: 'include', // ✅ CRITICAL: Send cookies with every request
 });
 
 // Auth link to include authorization headers

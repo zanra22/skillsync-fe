@@ -18,6 +18,19 @@ export interface ChatMessage {
   showTypingAnimation?: boolean; // Whether to show typing animation for this message
 }
 
+interface AIConversationProps {
+  messages: ChatMessage[];
+  onSendMessage: (message: string) => void;
+  onSelectOption: (option: string) => void;
+  onOtherSelected?: () => void; // Called when "Other" option is selected
+  isAITyping: boolean;
+  currentInput: string;
+  setCurrentInput: (input: string) => void;
+  placeholder?: string;
+  expectsInput?: boolean; // Whether the current step expects text input
+  onTypingComplete?: (messageId: string) => void;
+}
+
 interface AIConversationInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
@@ -33,12 +46,14 @@ export default function AIConversationInterface({
   messages,
   onSendMessage,
   onSelectOption,
+  onOtherSelected,
   isAITyping,
   currentInput,
   setCurrentInput,
   placeholder = "Type your response...",
+  expectsInput = true,
   onTypingComplete
-}: AIConversationInterfaceProps) {
+}: AIConversationProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -230,7 +245,13 @@ export default function AIConversationInterface({
                 key={index}
                 variant="outline"
                 size="sm"
-                onClick={() => onSelectOption(option)}
+                onClick={() => {
+                  if (option.includes("Other") && onOtherSelected) {
+                    onOtherSelected(); // Enable text input for custom input
+                  } else {
+                    onSelectOption(option);
+                  }
+                }}
                 className="border-accent/30 text-accent hover:bg-accent hover:text-white transition-all duration-200 hover:scale-105 font-medium font-inter"
               >
                 {option}
@@ -293,7 +314,7 @@ export default function AIConversationInterface({
               onChange={handleInputChange}
               placeholder={isAITyping ? "Ollie is thinking..." : placeholder}
               className="w-full pr-12 bg-input border-border focus:border-accent/50 focus:ring-2 focus:ring-accent/20 font-inter rounded-xl disabled:bg-muted disabled:cursor-not-allowed text-base py-3"
-              disabled={isAITyping || typingMessages.size < messages.filter(m => m.type === 'ai' && m.showTypingAnimation).length}
+              disabled={!expectsInput || isAITyping || typingMessages.size < messages.filter(m => m.type === 'ai' && m.showTypingAnimation).length}
               autoFocus={false} // We'll handle focus manually
             />
             {isUserTyping && !isAITyping && (
@@ -309,7 +330,7 @@ export default function AIConversationInterface({
           <Button 
             type="submit" 
             size="default"
-            disabled={!currentInput.trim() || isAITyping || typingMessages.size < messages.filter(m => m.type === 'ai' && m.showTypingAnimation).length}
+            disabled={!expectsInput || !currentInput.trim() || isAITyping || typingMessages.size < messages.filter(m => m.type === 'ai' && m.showTypingAnimation).length}
             className="bg-accent hover:bg-accent/90 text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-xl font-medium font-inter px-6"
           >
             <Send className="w-4 h-4 mr-2" />

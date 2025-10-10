@@ -8,6 +8,7 @@ interface OnboardingRequest {
   bio?: string;
   industry?: string;
   careerStage?: string;
+  currentRole?: string;
   goals?: Array<{
     skillName: string;
     description: string;
@@ -427,6 +428,7 @@ export async function POST(request: NextRequest) {
         bio: body.bio || '',
         industry: body.industry || '',
         careerStage: body.careerStage || '',
+        currentRole: body.currentRole || '',
         goals: (body.goals || []).map(goal => ({
           skillName: goal.skillName,
           description: goal.description,
@@ -508,50 +510,25 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Onboarding completed successfully');
     
-    // Log token refresh information
+    // ✅ SECURITY: Backend already set HTTP-only cookies (refresh_token, client_fp, fp_hash)
+    // Backend returns accessToken in GraphQL response for frontend to store in memory
     if (onboardingResult.accessToken) {
-      console.log('🔒 Fresh access token received from backend');
+      console.log('🔒 Fresh access token received from backend (will be stored in memory by frontend)');
       console.log('⏰ Token expires in:', onboardingResult.expiresIn, 'seconds');
     } else {
       console.log('⚠️ No fresh token in backend response');
     }
     
-    // Update the user-role cookie with the new role from the response
-    const newUserRole = onboardingResult.user?.role || 'learner';
-    console.log(`🍪 Updating user-role cookie to: ${newUserRole}`);
-    
+    // Return the response with tokens for frontend to handle
     const response = NextResponse.json({
       success: true,
       message: 'Onboarding completed successfully',
       user: onboardingResult.user,
       roadmaps: onboardingResult.roadmaps,
-      // Forward fresh access token from backend (HTTP-only cookies are already set)
-      access_token: onboardingResult.accessToken,
-      expires_in: onboardingResult.expiresIn
+      // Frontend will store this in React state (memory only)
+      accessToken: onboardingResult.accessToken,  // ✅ camelCase for frontend consistency
+      expiresIn: onboardingResult.expiresIn
     });
-    
-    // Set the updated role cookie
-    response.cookies.set('user-role', newUserRole, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    });
-    
-    // CRITICAL: Set the fresh auth-token cookie with updated role
-    if (onboardingResult.accessToken) {
-      console.log('🔒 Setting fresh auth-token cookie with updated role');
-      response.cookies.set('auth-token', onboardingResult.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-        maxAge: onboardingResult.expiresIn || 300 // Use backend expiry or default 5 min
-      });
-    } else {
-      console.log('⚠️ No fresh access token to set in cookie');
-    }
     
     return response;
 
