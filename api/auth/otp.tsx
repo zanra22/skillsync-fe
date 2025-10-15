@@ -173,8 +173,13 @@ export const otpApi = {
               id
               email
               username
+              firstName
+              lastName
               role
               accountStatus
+              profile {
+                onboardingCompleted
+              }
             }
             deviceTrusted
             accessToken

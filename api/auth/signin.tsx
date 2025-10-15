@@ -100,13 +100,19 @@ export const authApi = {
           login(input: $input) {
             success
             message
+            otpRequired
             user {
               id
               email
               username
+              firstName
+              lastName
               role
               accountStatus
               isPremium
+              profile {
+                onboardingCompleted
+              }
             }
             accessToken
             expiresIn
@@ -128,9 +134,10 @@ export const authApi = {
         login: {
           success: boolean;
           message: string;
+          otpRequired?: boolean;
           user: any;
-          accessToken: string;
-          expiresIn: number;
+          accessToken?: string;
+          expiresIn?: number;
         };
       };
     }>(mutation, variables);
@@ -144,22 +151,24 @@ export const authApi = {
     // Transform backend response to match frontend DTO
     const signInResponse = {
       user: {
-        id: loginResult.user.id,
-        email: loginResult.user.email,
-        firstName: loginResult.user.username, // Using username as firstName for now
-        lastName: "", // Backend doesn't have lastName yet
+        id: loginResult.user?.id || '',
+        email: loginResult.user?.email || '',
+        firstName: loginResult.user?.firstName || loginResult.user?.username || '',
+        lastName: loginResult.user?.lastName || '',
         avatar: undefined,
-        emailVerified: loginResult.user.accountStatus === "active",
-        role: loginResult.user.role, // Use the actual role from backend
-        createdAt: new Date().toISOString(), // Placeholder
-        updatedAt: new Date().toISOString(), // Placeholder
+        emailVerified: loginResult.user?.accountStatus === "active",
+        role: loginResult.user?.role || 'new_user',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        profile: loginResult.user?.profile || null,
       },
       tokens: {
-        accessToken: loginResult.accessToken,
+        accessToken: loginResult.accessToken || '',
         refreshToken: "", // Stored in HTTP-only cookie
-        expiresIn: loginResult.expiresIn,
+        expiresIn: loginResult.expiresIn || 0,
       },
       message: loginResult.message,
+      otpRequired: loginResult.otpRequired || false,
     };
 
     // Automatically store tokens - Remove localStorage usage
@@ -189,11 +198,10 @@ export const authApi = {
 
     const variables = {
       input: {
-        firstName: "", // Will be set during onboarding
-        lastName: "", // Will be set during onboarding
         email: data.email,
         password: data.password,
         acceptTerms: data.acceptTerms,
+        // ✅ firstName and lastName removed - collected during onboarding, not signup
       },
     };
 

@@ -13,16 +13,42 @@ export default function OnboardingPage() {
 
   // Redirect if doesn't need onboarding (only for already established users)
   useEffect(() => {
+    // PERSIST LOGS: Save to localStorage for debugging
+    const onboardingPageDebug = {
+      timestamp: new Date().toISOString(),
+      page: 'onboarding',
+      isLoading,
+      user: user,
+      hasUser: !!user,
+      hasProfile: !!(user && user.profile),
+      onboardingCompleted: user?.profile?.onboarding_completed,
+      willRedirect: !!(user && user.profile && user.profile.onboarding_completed === true),
+    };
+    localStorage.setItem('DEBUG_onboarding_page', JSON.stringify(onboardingPageDebug, null, 2));
+    
+    console.log('🏠 ONBOARDING PAGE EFFECT TRIGGERED');
+    console.log('  ⏳ isLoading:', isLoading);
+    console.log('  👤 user:', user);
+    console.log('  📋 user.profile:', user?.profile);
+    console.log('  ✅ onboarding_completed:', user?.profile?.onboarding_completed);
+    
     // If we're still loading the initial auth state, wait
-    if (isLoading) return;
+    if (isLoading) {
+      console.log('  ⏳ Still loading, waiting...');
+      return;
+    }
     
     // Only redirect if user definitely has completed onboarding
     if (user && user.profile && user.profile.onboarding_completed === true) {
       // User has already completed onboarding
+      console.log('  🔄 User already completed onboarding, redirecting...');
       const targetUrl = (user.role === 'super_admin' || user.role === 'admin') ? '/dashboard' : '/user-dashboard';
+      console.log('  🎯 Redirect target:', targetUrl);
       router.push(targetUrl);
       return;
     }
+    
+    console.log('  ✅ User needs onboarding, staying on page');
   }, [isLoading, user, router]);
 
   const handleOnboardingComplete = async (extractedData: ExtractedData) => {

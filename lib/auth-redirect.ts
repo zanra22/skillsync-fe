@@ -17,7 +17,8 @@ export function getDashboardUrl(user: SignInResponseDto['user']): string {
   }
   
   // New users or users who haven't completed onboarding go to onboarding
-  if (user.role === 'new-user' || (user.profile && user.profile.onboarding_completed === false)) {
+  // BUGFIX: Backend uses 'new_user' (underscore), not 'new-user' (hyphen)
+  if (user.role === 'new_user' || (user.profile && user.profile.onboarding_completed === false)) {
     return '/onboarding';
   }
   
@@ -64,7 +65,7 @@ export function redirectAuthenticatedUser(
  */
 export function getRoleDisplayName(role: UserRole): string {
   const roleNames: Record<UserRole, string> = {
-    'new-user': 'New User',
+    'new_user': 'New User',  // BUGFIX: Changed from 'new-user' to match backend
     'learner': 'Learner',
     'mentor': 'Mentor',
     'admin': 'Administrator',

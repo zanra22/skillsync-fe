@@ -89,34 +89,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Helper function to check if user needs onboarding
   const needsOnboarding = (user: any): boolean => {
-    console.log('🔍 Checking if user needs onboarding:', {
-      user,
+    // PERSIST LOGS: Save to localStorage so they survive redirect
+    const debugData = {
+      timestamp: new Date().toISOString(),
+      function: 'needsOnboarding',
+      user: user,
       role: user?.role,
       roleType: typeof user?.role,
+      isNewUser: user?.role === 'new_user',
       firstName: user?.firstName,
       lastName: user?.lastName,
-      profile: user?.profile
-    });
+      profile: user?.profile,
+    };
+    localStorage.setItem('DEBUG_needsOnboarding', JSON.stringify(debugData, null, 2));
+    
+    console.log('🔍 needsOnboarding CALLED - Full analysis:');
+    console.log('  📦 User object:', JSON.stringify(user, null, 2));
+    console.log('  🎭 user.role:', user?.role);
+    console.log('  🔤 user.role type:', typeof user?.role);
+    console.log('  ✅ user.role === "new_user"?', user?.role === 'new_user');
+    console.log('  👤 firstName:', user?.firstName);
+    console.log('  👤 lastName:', user?.lastName);
+    console.log('  📋 profile:', user?.profile);
     
     // Check if user has completed onboarding based on profile data
     // For new users without names or profile, they need onboarding
     
-    // If user has role 'new-user', no role, null role, or undefined role, they definitely need onboarding
-    if (!user.role || user.role === 'new-user' || user.role === null || user.role === 'null' || user.role === 'undefined') {
+    // CRITICAL: Check for 'new_user' role (with underscore, not hyphen!)
+    if (user.role === 'new_user') {
+      console.log('✅ User needs onboarding: role is new_user');
+      return true;
+    }
+    
+    // If user has no role, null role, or undefined role, they need onboarding
+    if (!user.role || user.role === null || user.role === 'null' || user.role === 'undefined') {
       console.log('✅ User needs onboarding: no valid role');
       return true;
     }
     
     // Check if user has a profile with onboarding_completed flag
-    if (user.profile && user.profile.onboarding_completed) {
-      console.log('✅ User has completed onboarding based on profile');
-      return false;
+    // Support both snake_case (backend) and camelCase (frontend) naming
+    if (user.profile) {
+      const onboardingComplete = user.profile.onboarding_completed || user.profile.onboardingCompleted;
+      if (onboardingComplete) {
+        console.log('✅ User has completed onboarding based on profile');
+        return false;
+      }
+    }
+    
+    // CRITICAL: If user has NO profile object at all (new user from signup)
+    if (!user.profile) {
+      console.log('✅ User needs onboarding: no profile exists');
+      return true;
     }
     
     // If user has names and role but no profile data, assume they need onboarding
     // This handles the transition period for existing users
-    const firstName = user.firstName || user.username?.split(' ')[0] || '';
-    const lastName = user.lastName || user.username?.split(' ')[1] || '';
+    const firstName = user.firstName || user.first_name || user.username?.split(' ')[0] || '';
+    const lastName = user.lastName || user.last_name || user.username?.split(' ')[1] || '';
     
     // If user has empty names (new signup flow), they definitely need onboarding
     if (!firstName || !lastName) {
@@ -124,21 +154,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return true;
     }
     
-    // If we don't have profile data but user has names and role, check if profile exists
-    // This is a fallback for users who might have completed onboarding but we don't have profile data
-    const needsIt = !user.profile;
-    console.log(`${needsIt ? '✅' : '❌'} User ${needsIt ? 'needs' : 'does not need'} onboarding: profile check`);
-    return needsIt;
+    // All checks passed - user has profile and names
+    console.log('❌ User does not need onboarding: all checks passed');
+    return false;
   };
 
   // Helper function for role-based redirects
   const redirectBasedOnRole = (user: any) => {
-    console.log('🎯 Attempting redirect for user:', user);
+    // PERSIST LOGS: Save to localStorage so they survive redirect
+    const redirectDebug = {
+      timestamp: new Date().toISOString(),
+      function: 'redirectBasedOnRole',
+      user: user,
+      role: user?.role,
+      isNewUser: user?.role === 'new_user',
+      hasProfile: !!user?.profile,
+      needsOnboarding: null as boolean | null, // Will update below
+      targetUrl: null as string | null, // Will update below
+    };
+    
+    console.log('🎯 redirectBasedOnRole CALLED');
+    console.log('  📦 Full user object:', JSON.stringify(user, null, 2));
+    console.log('  🎭 User role:', user?.role);
+    console.log('  ✅ Is new_user?', user?.role === 'new_user');
+    console.log('  📋 Has profile?', !!user?.profile);
+    
     if (typeof window !== 'undefined') {
       let targetUrl = '';
       
       // Check if user needs onboarding first
-      if (needsOnboarding(user)) {
+      console.log('  🔍 Calling needsOnboarding...');
+      const needs = needsOnboarding(user);
+      redirectDebug.needsOnboarding = needs;
+      console.log('  📊 needsOnboarding returned:', needs);
+      
+      if (needs) {
         console.log('📝 User needs onboarding, redirecting to onboarding flow');
         targetUrl = '/onboarding';
       } else if (user.role === 'super_admin' || user.role === 'admin') {
@@ -147,7 +197,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         targetUrl = '/user-dashboard';
       }
       
-      console.log('🔄 Redirecting to:', targetUrl);
+      // PERSIST LOGS: Save final decision to localStorage
+      redirectDebug.targetUrl = targetUrl;
+      localStorage.setItem('DEBUG_redirectBasedOnRole', JSON.stringify(redirectDebug, null, 2));
+      localStorage.setItem('DEBUG_LAST_REDIRECT', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        from: window.location.pathname,
+        to: targetUrl,
+        user: { role: user?.role, hasProfile: !!user?.profile },
+        needsOnboarding: needs,
+      }, null, 2));
+      
+      console.log('🔄 FINAL REDIRECT DECISION: Redirecting to:', targetUrl);
       console.log('🔍 Current URL before redirect:', window.location.href);
       console.log('🔍 Current pathname:', window.location.pathname);
       
@@ -344,52 +405,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
         console.log('✅ Credentials valid, checking if OTP required...');
         
-        // STEP 2: Now check if OTP is required for this user
-        if (authState.deviceInfo) {
-          const deviceTrustCheck = await otpApi.checkDeviceTrust({
-            email,
-            deviceInfo: authState.deviceInfo,
-          });
-
-          // For super_admin, ALWAYS require OTP regardless of device trust
-          const isSuperAdmin = await checkIfSuperAdmin(email);
-          const requiresOtp = deviceTrustCheck.requiresOtp || isSuperAdmin;
-
-          console.log('🔍 Device trust check:', { 
-            email,
-            requiresOtp: deviceTrustCheck.requiresOtp, 
-            isSuperAdmin, 
-            finalRequiresOtp: requiresOtp,
-            deviceInfo: authState.deviceInfo
-          });
-
-          if (requiresOtp) {
-            console.log('📱 OTP required, sending OTP...');
-            
-            // STEP 3: Send OTP only after credentials are validated
-            const otpResponse = await otpApi.sendOTP({
-              email,
-              purpose: 'signin',
-              deviceInfo: authState.deviceInfo,
-            });
-
-            console.log('📧 OTP sent, storing pending login...');
-            setAuthState(prev => ({
-              ...prev,
-              isLoading: false,
-              otpRequired: true,
-              pendingEmail: email,
-              pendingPurpose: 'signin',
-            }));
-            
-            // Store login credentials temporarily for post-OTP login
-            console.log('💾 Storing pending login credentials...');
-            sessionStorage.setItem('pending-login', JSON.stringify({ email, password, rememberMe }));
-            console.log('💾 Stored pending login data');
-            
-            // Don't throw error, just set OTP required state
-            return;
-          }
+        // STEP 2: Check if backend login returned otpRequired flag
+        // ✅ Backend login mutation already handles OTP sending (no duplicate emails)
+        if (credentialValidation.otpRequired) {
+          console.log('📱 OTP required by backend (already sent by login mutation)');
+          
+          setAuthState(prev => ({
+            ...prev,
+            isLoading: false,
+            otpRequired: true,
+            pendingEmail: email,
+            pendingPurpose: 'signin',
+          }));
+          
+          // Store login credentials temporarily for post-OTP login
+          console.log('💾 Storing pending login credentials...');
+          sessionStorage.setItem('pending-login', JSON.stringify({ email, password, rememberMe }));
+          console.log('💾 Stored pending login data');
+          
+          // Don't throw error, just set OTP required state
+          return;
         }
 
         // STEP 4: If no OTP required, complete login directly
@@ -732,106 +767,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         // Handle post-OTP signup verification
-        if (authState.pendingPurpose === 'signup') {
-          console.log('🔄 Processing post-OTP signup...');
+        if (authState.pendingPurpose === 'signup' && response.accessToken) {
+          console.log('� Processing post-OTP signup with access token from backend...');
           
-          try {
-            // Get stored signup credentials
-            const pendingSignup = sessionStorage.getItem('pending-signup');
-            console.log('📦 Pending signup data:', !!pendingSignup);
-            
-            if (pendingSignup) {
-              const { email, password } = JSON.parse(pendingSignup);
-              sessionStorage.removeItem('pending-signup');
-              
-              console.log('🔑 Completing signup authentication...', { email });
-              
-              // Add a small delay to ensure backend has processed the account activation
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              // Complete the authentication process by signing in
-              const loginResponse = await authApi.signIn({
-                email,
-                password,
-                rememberMe: false, // Default for new signups
-              });
+          // ✅ Backend already returned access token and set HTTP-only cookies for signup
+          const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes (default access token lifetime)
 
-              console.log('✅ Signup authentication response:', loginResponse);
-              const expiresAt = Date.now() + (loginResponse.tokens.expiresIn * 1000);
+          // ✅ SECURITY: Store accessToken ONLY in memory (React state)
+          console.log('🔐 Storing access token in memory only (secure)');
 
-              // ✅ SECURITY: Store accessToken ONLY in memory (React state)
-              // Backend already set HTTP-only refresh_token cookie
-              console.log('🔐 Storing access token in memory only (secure)');
+          setAuthState(prev => ({
+            ...prev,
+            user: response.user as any,
+            accessToken: response.accessToken || null,
+            isAuthenticated: true,
+            isLoading: false,
+            tokenExpiresAt: expiresAt,
+            isRedirecting: true,
+          }));
 
-              setAuthState(prev => ({
-                ...prev,
-                user: loginResponse.user,
-                accessToken: loginResponse.tokens.accessToken,
-                isAuthenticated: true,
-                isLoading: false,
-                tokenExpiresAt: expiresAt,
-                isRedirecting: true,
-              }));
+          console.log('✅ Auth state updated for new user:', {
+            user: response.user,
+            role: response.user?.role,
+            isAuthenticated: true,
+            needsOnboarding: needsOnboarding(response.user)
+          });
 
-              console.log('✅ Auth state updated for new user:', {
-                user: loginResponse.user,
-                role: loginResponse.user.role,
-                isAuthenticated: true
-              });
+          // Show success toast
+          if (typeof window !== 'undefined') {
+            const { toast } = await import('sonner');
+            toast.success("Account verified successfully! Welcome to SkillSync!");
+          }
 
-              // Show success toast
-              if (typeof window !== 'undefined') {
-                const { toast } = await import('sonner');
-                toast.success("Account verified successfully! Welcome to SkillSync!");
-              }
+          // Clean up pending signup data
+          sessionStorage.removeItem('pending-signup');
 
-              console.log('🚀 Redirecting new user based on profile:', loginResponse.user);
-              // Always redirect new users to onboarding after successful signup
-              if (typeof window !== 'undefined') {
-                console.log('🔄 Direct redirect to onboarding for new user');
-                window.location.href = '/onboarding';
-              }
-              
-            } else {
-              console.log('❌ No pending signup data found');
-              // Fallback: redirect to onboarding without auth (this might cause issues)
-              if (typeof window !== 'undefined') {
-                const { toast } = await import('sonner');
-                toast.success("Account verified! Please sign in to continue.");
-                window.location.href = '/signin?message=account-verified';
-              }
-            }
-            
-          } catch (error) {
-            console.error('❌ Error processing signup authentication:', error);
-            setAuthState(prev => ({ ...prev, isLoading: false }));
-            
-            // Show specific error message
-            if (typeof window !== 'undefined') {
-              const { toast } = await import('sonner');
-              if (error instanceof Error && error.message.includes('pending verification')) {
-                toast.error("Account activation is still in progress. Please try again in a moment.");
-                // Retry after a delay
-                setTimeout(async () => {
-                  try {
-                    const pendingSignup = sessionStorage.getItem('pending-signup');
-                    if (pendingSignup) {
-                      const { email, password } = JSON.parse(pendingSignup);
-                      const retryResponse = await authApi.signIn({ email, password, rememberMe: false });
-                      // Handle successful retry...
-                      window.location.reload();
-                    }
-                  } catch (retryError) {
-                    console.error('Retry failed:', retryError);
-                    toast.error("Please try signing in manually.");
-                    window.location.href = '/signin?message=account-verified';
-                  }
-                }, 3000);
-              } else {
-                toast.error("Authentication failed. Please sign in manually.");
-                window.location.href = '/signin?message=account-verified';
-              }
-            }
+          console.log('🚀 Redirecting new user to onboarding...');
+          // Always redirect new users to onboarding after successful signup
+          if (typeof window !== 'undefined' && response.user) {
+            // Use redirectBasedOnRole which will check needsOnboarding
+            redirectBasedOnRole(response.user);
+          }
+        }
+        
+        // Fallback: If signup OTP verified but no access token (shouldn't happen with fix)
+        if (authState.pendingPurpose === 'signup' && !response.accessToken) {
+          console.warn('⚠️ Signup OTP verified but no access token returned - redirecting to signin');
+          sessionStorage.removeItem('pending-signup');
+          if (typeof window !== 'undefined') {
+            const { toast } = await import('sonner');
+            toast.success("Account verified! Please sign in to continue.");
+            window.location.href = '/signin?message=account-verified';
           }
         }
         

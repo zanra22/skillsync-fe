@@ -14,13 +14,14 @@ export interface SignInResponseDto {
     lastName: string;
     avatar?: string;
     emailVerified: boolean;
-    role: 'new-user' | 'learner' | 'mentor' | 'admin' | 'super_admin' | 'moderator' | 'hr_manager' | 'recruiter' | 'premium_user' | 'vip_mentor';
+    role: 'new_user' | 'learner' | 'mentor' | 'admin' | 'super_admin' | 'moderator' | 'hr_manager' | 'recruiter' | 'premium_user' | 'vip_mentor';
     createdAt: string;
     updatedAt: string;
     profile?: {
-      onboarding_completed: boolean;
-      onboarding_step: string;
-    };
+      onboarding_completed?: boolean;
+      onboardingCompleted?: boolean; // Support both naming conventions
+      onboarding_step?: string;
+    } | null;
   };
   tokens: {
     accessToken: string;
@@ -28,6 +29,7 @@ export interface SignInResponseDto {
     expiresIn: number;
   };
   message: string;
+  otpRequired?: boolean; // ✅ NEW: OTP requirement flag from backend
 }
 
 export interface SignUpRequestDto {
@@ -45,9 +47,10 @@ export interface SignUpResponseDto {
     lastName: string;
     emailVerified: boolean;
     profile?: {
-      onboarding_completed: boolean;
-      onboarding_step: string;
-    };
+      onboarding_completed?: boolean;
+      onboardingCompleted?: boolean; // Support both naming conventions
+      onboarding_step?: string;
+    } | null;
   };
   message: string;
 }
