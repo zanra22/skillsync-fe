@@ -48,9 +48,10 @@ export function useRoleGuard(allowedRoles: string[]) {
         page: window.location.pathname
       });
       
-      // Special case: new-user should go to onboarding
-      if (userRole === 'new-user') {
-        console.log('🚀 Redirecting new-user to onboarding');
+      // Special case: new_user should go to onboarding
+      // BUGFIX: Backend uses 'new_user' (underscore), not 'new-user' (hyphen)
+      if (userRole === 'new_user') {
+        console.log('🚀 Redirecting new_user to onboarding');
         router.push('/onboarding');
         return;
       }

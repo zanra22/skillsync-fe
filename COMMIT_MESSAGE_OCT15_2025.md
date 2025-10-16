@@ -19,10 +19,11 @@ CRITICAL FIXES:
 
 BUGS FIXED:
 1. Onboarding redirect broken (role mismatch: 'new-user' vs 'new_user')
-2. OTP verification missing profile data (GraphQL query incomplete)
-3. Login mutation missing profile data
-4. Duplicate OTP check removed (backend sends OTP, frontend shouldn't)
-5. Debug logs cleared on redirect (added localStorage persistence)
+2. useRoleGuard hook role check (same mismatch)
+3. OTP verification missing profile data (GraphQL query incomplete)
+4. Login mutation missing profile data
+5. Duplicate OTP check removed (backend sends OTP, frontend shouldn't)
+6. Debug logs cleared on redirect (added localStorage persistence)
 
 ROOT CAUSE:
 - Frontend was checking user.role === 'new-user' (hyphen)
@@ -37,6 +38,7 @@ ADDITIONAL IMPROVEMENTS:
 
 FILES MODIFIED:
 - lib/auth-redirect.ts (Lines 20, 68)
+- hooks/useRoleGuard.tsx (Line 52)
 - api/auth/otp.tsx (Lines 173-182)
 - api/auth/signin.tsx (Lines 100-170)
 - context/AuthContext.tsx (Lines 89-200, 345-360)
@@ -84,7 +86,34 @@ const roleNames: Record<UserRole, string> = {
 
 ---
 
-### 2. **OTP Verification Missing Profile Data**
+### 2. **useRoleGuard Hook Role Check** (SAME BUG)
+**File**: `hooks/useRoleGuard.tsx` Line 52  
+**Issue**: Same role name mismatch (`'new-user'` vs `'new_user'`)  
+**Fix**: Changed hyphen to underscore  
+**Impact**: Role guard now correctly redirects new users to onboarding
+
+**Code Change**:
+```typescript
+// BEFORE (Line 52)
+if (userRole === 'new-user') {
+  console.log('🚀 Redirecting new-user to onboarding');
+  router.push('/onboarding');
+  return;
+}
+
+// AFTER (Lines 52-56)
+// BUGFIX: Backend uses 'new_user' (underscore), not 'new-user' (hyphen)
+if (userRole === 'new_user') {
+  console.log('🚀 Redirecting new_user to onboarding');
+  router.push('/onboarding');
+  return;
+}
+```
+
+---
+
+### 3. **OTP Verification Missing Profile Data**
+### 3. **OTP Verification Missing Profile Data**
 **File**: `api/auth/otp.tsx` Lines 173-182  
 **Issue**: GraphQL query not fetching `profile` field after OTP verification  
 **Fix**: Added `profile { onboardingCompleted }`, `firstName`, `lastName` fields  
@@ -119,7 +148,8 @@ user {
 
 ---
 
-### 3. **Login Mutation Missing Profile Data**
+### 4. **Login Mutation Missing Profile Data**
+### 4. **Login Mutation Missing Profile Data**
 **File**: `api/auth/signin.tsx` Lines 100-170  
 **Issue**: GraphQL login query not fetching profile/names  
 **Fix**: Added `profile`, `firstName`, `lastName`, `otpRequired` fields  
@@ -166,7 +196,8 @@ login(input: $input) {
 
 ---
 
-### 4. **Remove Duplicate OTP Sending**
+### 5. **Remove Duplicate OTP Sending**
+### 5. **Remove Duplicate OTP Sending**
 **File**: `context/AuthContext.tsx` Lines 345-360  
 **Issue**: Frontend was calling `sendOTP()` after backend already sent OTP  
 **Fix**: Check `otpRequired` flag from backend response instead  
@@ -203,7 +234,8 @@ if (credentialValidation.otpRequired) {
 
 ---
 
-### 5. **Enhanced AuthContext Debugging**
+### 6. **Enhanced AuthContext Debugging**
+### 6. **Enhanced AuthContext Debugging**
 **File**: `context/AuthContext.tsx` Lines 89-200  
 **Issue**: Console logs cleared on redirect (full page navigation)  
 **Fix**: Added localStorage persistence for debug data  
@@ -241,7 +273,8 @@ localStorage.setItem('DEBUG_LAST_REDIRECT', JSON.stringify({
 
 ---
 
-### 6. **Onboarding Page Debug Logging**
+### 7. **Onboarding Page Debug Logging**
+### 7. **Onboarding Page Debug Logging**
 **File**: `app/onboarding/page.tsx` Lines 14-51  
 **Issue**: Couldn't debug why page wasn't loading  
 **Fix**: Added localStorage persistence for onboarding page mount  
@@ -268,7 +301,8 @@ useEffect(() => {
 
 ---
 
-### 7. **Type Definition Updates**
+### 8. **Type Definition Updates**
+### 8. **Type Definition Updates**
 **File**: `types/auth/dto.tsx` Lines 17, 23-25, 30  
 **Issue**: Role type had hyphen, profile type too strict  
 **Fix**: Changed to underscore, made profile nullable  
@@ -306,7 +340,7 @@ export interface SignInResponseDto {
 
 ---
 
-### 8. **Improved needsOnboarding() Logic**
+### 9. **Improved needsOnboarding() Logic**
 **File**: `context/AuthContext.tsx` Lines 89-154  
 **Issue**: Logic wasn't comprehensive enough  
 **Fix**: Added multiple checks for different scenarios  
@@ -394,6 +428,7 @@ user.role = 'new_user'  // ← Underscore!
 | File | Lines | Changes | Purpose |
 |------|-------|---------|---------|
 | `lib/auth-redirect.ts` | 20, 68 | Hyphen → underscore | Fix role check |
+| `hooks/useRoleGuard.tsx` | 52 | Hyphen → underscore | Fix role guard |
 | `api/auth/otp.tsx` | 173-182 | Add profile/names fields | Complete OTP data |
 | `api/auth/signin.tsx` | 100-170 | Add profile/names/otpRequired | Complete login data |
 | `context/AuthContext.tsx` | 89-200, 345-360 | Debug logging + OTP fix | Improve debugging + remove duplicate |
@@ -575,7 +610,7 @@ if (user.role === USER_ROLES.NEW_USER) { ... }
 
 ## 🎉 Success Metrics
 
-- ✅ **1 bug fixed** (onboarding redirect)
+- ✅ **2 bugs fixed** (onboarding redirect + useRoleGuard role check)
 - ✅ **4 improvements** (data fetching, debug logging, types, OTP)
 - ✅ **100% authentication flow working** (login → OTP → onboarding)
 - ✅ **Debug tools added** (localStorage persistence for troubleshooting)
