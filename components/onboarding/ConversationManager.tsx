@@ -23,6 +23,7 @@ export interface ExtractedData {
   currentRole?: string; // Current profession/role for working professionals and career shifters
   industry?: string;
   careerStage?: string;
+  transitionTimeline?: string; // Timeline for career transition (career changers only)
   goals?: Array<{
     skillName: string;
     description: string;
@@ -158,14 +159,14 @@ export const conversationSteps: Record<string, ConversationStep> = {
     type: 'question',
     aiMessage: "What's your timeline for making this career transition?",
     options: [
-      "I'm actively job searching now 🏃‍♂️",
-      "Within the next 6 months ⏰",
-      "Within the next year 📅",
-      "It's a longer-term goal (1+ years) 🎯"
+      "Less than 6 months ⚡",
+      "Within 6-12 months ⏰", 
+      "Within 1-2 years 📅",
+      "It's a longer-term goal (2+ years) 🎯"
     ],
     expectsInput: false,
     nextStep: 'goals_exploration',
-    dataField: 'careerStage'
+    dataField: 'transitionTimeline'
   },
 
   industry_from_field: {
@@ -459,15 +460,19 @@ export class ConversationManager {
       case 'role':
         if (response.includes('student')) {
           this.extractedData.role = 'student';
+          this.extractedData.currentRole = 'student'; // Both role and currentRole are 'student'
           this.extractedData.careerStage = 'student'; // Use the correct Django choice value
         } else if (response.includes('professional')) {
           this.extractedData.role = 'professional';
+          // currentRole will be set in current_profession step with actual job title
           // careerStage will be set in experience_level step
         } else if (response.includes('change careers')) {
           this.extractedData.role = 'career_changer';
-          // careerStage will be set in transition_timeline step as 'career_changer'
+          // currentRole will be set in current_profession step with actual job title
+          // careerStage will be set separately from transitionTimeline
         } else {
           this.extractedData.role = 'other';
+          this.extractedData.currentRole = 'other';
           this.extractedData.careerStage = 'entry_level'; // Default for 'other' users
         }
         break;
@@ -483,22 +488,27 @@ export class ConversationManager {
         break;
 
       case 'careerStage':
+        // This handles experience level for professionals
         if (response.includes('0-2 years') || response.includes('starting')) this.extractedData.careerStage = 'entry_level';
         else if (response.includes('2-5 years') || response.includes('comfortable')) this.extractedData.careerStage = 'mid_level';
         else if (response.includes('5-10 years') || response.includes('experienced')) this.extractedData.careerStage = 'senior_level';
         else if (response.includes('10+ years') || response.includes('expert')) this.extractedData.careerStage = 'executive';
-        else if (response.includes('actively')) this.extractedData.careerStage = 'career_changer';
-        else if (response.includes('6 months')) this.extractedData.careerStage = 'career_changer';
-        else if (response.includes('year')) this.extractedData.careerStage = 'career_changer';
+        break;
+
+      case 'transitionTimeline':
+        // This handles career transition timeline (separate from careerStage)
+        this.extractedData.careerStage = 'career_changer'; // Set careerStage to career_changer
+        if (response.includes('Less than 6 months')) this.extractedData.transitionTimeline = 'immediate';
+        else if (response.includes('6-12 months')) this.extractedData.transitionTimeline = '6_months';
+        else if (response.includes('1-2 years')) this.extractedData.transitionTimeline = '1_year';
+        else if (response.includes('longer-term') || response.includes('2+ years')) this.extractedData.transitionTimeline = 'long_term';
         break;
 
       case 'goals':
-        // Enhanced goals parsing for paragraph responses
+        // Always use the user's original input as skillName for consistency
         const goalText = response.trim();
-        const skillName = this.extractSkillNameFromText(goalText);
-        
         this.extractedData.goals = [{
-          skillName: skillName,
+          skillName: goalText, // Use full original input
           description: goalText,
           targetSkillLevel: 'intermediate', // Default, will be updated later
           priority: 1

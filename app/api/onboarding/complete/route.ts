@@ -9,6 +9,7 @@ interface OnboardingRequest {
   industry?: string;
   careerStage?: string;
   currentRole?: string;
+  transitionTimeline?: string; // Timeline for career transition
   goals?: Array<{
     skillName: string;
     description: string;
@@ -429,6 +430,7 @@ export async function POST(request: NextRequest) {
         industry: body.industry || '',
         careerStage: body.careerStage || '',
         currentRole: body.currentRole || '',
+        transitionTimeline: body.transitionTimeline || '',
         goals: (body.goals || []).map(goal => ({
           skillName: goal.skillName,
           description: goal.description,
@@ -460,11 +462,7 @@ export async function POST(request: NextRequest) {
       headers['Cookie'] = cookieHeader;
     }
     
-    if (isDevelopment) {
-      headers['X-Dev-User-ID'] = 'sDV6TZHZjT';
-      headers['X-Dev-Mode'] = 'true';
-      console.log('🔧 Development mode: Added dev headers for authentication bypass');
-    }
+    // Removed dev header logic: always use normal authentication/session, even in development
     
     const graphqlResponse = await fetch(backendUrl, {
       method: 'POST',

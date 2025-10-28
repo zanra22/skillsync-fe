@@ -283,11 +283,18 @@ export default function OnboardingPage() {
           if (refreshSuccessful) {
             console.log('✅ Token refresh successful, retrying request...');
             // Retry the request with refreshed token
+            // Retry request - only normal headers
+            const retryHeaders: HeadersInit = {
+              'Content-Type': 'application/json',
+            };
+            if (process.env.NODE_ENV === 'development') {
+              retryHeaders['Cache-Control'] = 'no-cache';
+              retryHeaders['Pragma'] = 'no-cache';
+            }
+
             response = await fetch('/api/onboarding/complete', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+              headers: retryHeaders,
               body: JSON.stringify(onboardingData),
               credentials: 'include',
             });

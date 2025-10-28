@@ -1,9 +1,15 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { getDashboardUrl } from "@/lib/auth-redirect";
 
 const Hero = () => {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Gradient with new Aurora colors */}
@@ -51,9 +57,21 @@ const Hero = () => {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up"
             style={{ animationDelay: "0.4s" }}
           >
-            <Button size="xl" className="btn-hero text-lg py-4 glow-accent">
-              <Link href="/signin">Start Your Journey</Link>
-
+            <Button 
+              size="xl" 
+              className="btn-hero text-lg py-4 glow-accent"
+              onClick={() => {
+                // If authenticated, redirect to appropriate dashboard
+                if (isAuthenticated && user) {
+                  const dashboardUrl = getDashboardUrl(user);
+                  router.push(dashboardUrl);
+                } else {
+                  // Not authenticated, go to signin
+                  router.push('/signin');
+                }
+              }}
+            >
+              {isAuthenticated ? 'Go to Dashboard' : 'Start Your Journey'}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button

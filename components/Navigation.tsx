@@ -7,11 +7,16 @@ import Link from "next/link";
 import Logo from "./Logo";
 import Brand from "./Brand";
 import { motion, AnimatePresence, Variants } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { getDashboardUrl } from "@/lib/auth-redirect";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Wait for client-side hydration to avoid SSR mismatch
   useEffect(() => {
@@ -20,6 +25,19 @@ const Navigation = () => {
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const handleGetStarted = () => {
+    if (isAuthenticated && user) {
+      // Redirect to appropriate dashboard
+      const dashboardUrl = getDashboardUrl(user);
+      router.push(dashboardUrl);
+    } else {
+      // Not authenticated, go to signin
+      router.push('/signin');
+    }
+    // Close mobile menu if open
+    setIsMenuOpen(false);
   };
 
   const handleScroll = (
@@ -134,8 +152,11 @@ const Navigation = () => {
                 </AnimatePresence>
               )}
             </Button>
-            <Button className="btn-hero">
-              <Link href="/signin">Get Started</Link>
+            <Button 
+              className="btn-hero"
+              onClick={handleGetStarted}
+            >
+              {isAuthenticated ? 'Dashboard' : 'Get Started'}
             </Button>
           </div>
 
@@ -196,8 +217,11 @@ const Navigation = () => {
                   Pricing
                 </a>
                 <div className="pt-4 space-y-2">
-                  <Button className="w-full btn-hero">
-                    <Link href="/signin">Get Started</Link>
+                  <Button 
+                    className="w-full btn-hero"
+                    onClick={handleGetStarted}
+                  >
+                    {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
                   </Button>
                 </div>
               </div>

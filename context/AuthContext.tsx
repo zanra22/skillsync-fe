@@ -609,6 +609,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isAuthenticated: true
           }));
           
+              // Debug: Log cookies after refresh to confirm new refresh_token is present
+              if (typeof document !== 'undefined') {
+                const cookieHeader = document.cookie;
+                console.log('🍪 Cookies after refresh:', cookieHeader);
+                const hasRefreshToken = cookieHeader.includes('refresh_token=');
+                console.log('🔍 refresh_token present after refresh:', hasRefreshToken);
+              }
           console.log('✅ Token refreshed successfully');
           return true;
         }
