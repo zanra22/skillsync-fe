@@ -137,7 +137,7 @@ const UserDashboard = () => {
   };
 
   // Transform roadmap data to course format
-  const recentCourses = roadmapsData?.roadmaps?.listRoadmaps?.map((roadmap: any, index: number) => ({
+  const recentCourses = (roadmapsData as any)?.roadmaps?.listRoadmaps?.map((roadmap: any, index: number) => ({
     id: roadmap.id,
     title: roadmap.title,
     description: roadmap.description,
