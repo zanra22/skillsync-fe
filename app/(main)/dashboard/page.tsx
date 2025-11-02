@@ -117,4 +117,4 @@ const SuperAdminDashboard = () => {
   );
 };
 
-export default SuperAdminDashboard;
+export default withAdminAuth(SuperAdminDashboard);

@@ -2,17 +2,27 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 
+// Storage for access token (updated by AuthContext)
+let currentAccessToken: string | null = null;
+
+// ✅ NEW: Export function for AuthContext to sync token with Apollo
+export const setApolloAccessToken = (token: string | null) => {
+  currentAccessToken = token;
+};
+
 // HTTP link for GraphQL endpoint
 const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "https://skillsync-graphql-e2dpdxhgebeqhhhk.southeastasia-01.azurewebsites.net",
-  credentials: 'include', // ✅ CRITICAL: Send cookies with every request
+  credentials: 'include', // ✅ CRITICAL: Send cookies with every request (refresh_token)
 });
 
 // Auth link to include authorization headers
 const authLink = setContext((_, { headers }) => {
-  // Get the authentication token from localStorage or wherever you store it
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-  
+  // ✅ SECURITY: Get token from AuthContext (in memory), NOT localStorage
+  // Token is stored in React state (memory only) for security
+  // Refresh token stays in HTTP-only cookie and is sent automatically via credentials: 'include'
+  const token = currentAccessToken;
+
   return {
     headers: {
       ...headers,

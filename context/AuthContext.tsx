@@ -6,6 +6,7 @@ import { otpApi, deviceUtils } from '@/api/auth/otp';
 import type { SignInResponseDto, SignUpRequestDto } from '@/types/auth/dto';
 import type { DeviceInfoDto, VerifyOTPResponseDto } from '@/types/auth/otp';
 import { devAuthHelper } from '@/lib/dev-auth-helper';
+import { setApolloAccessToken } from '@/lib/apollo-client'; // ✅ NEW: Update Apollo Client with token
 
 interface AuthState {
   user: SignInResponseDto['user'] | null;
@@ -249,6 +250,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthState(prev => ({ ...prev, deviceInfo }));
     }
   }, []);
+
+  // ✅ NEW: Sync access token with Apollo Client whenever it changes
+  useEffect(() => {
+    setApolloAccessToken(authState.accessToken);
+  }, [authState.accessToken]);
 
   // Check for existing session on mount
   useEffect(() => {
