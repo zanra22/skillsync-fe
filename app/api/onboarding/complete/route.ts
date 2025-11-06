@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
             'Content-Type': 'application/json',
             'Cookie': cookieHeader || '',
           },
+          credentials: 'include', // 🔑 CRITICAL: Send HTTP-only cookies to backend
           body: JSON.stringify({
             query: refreshMutation,
             variables: {
@@ -313,6 +314,7 @@ export async function POST(request: NextRequest) {
     const graphqlResponse = await fetch(backendUrl, {
       method: 'POST',
       headers: headers,
+      credentials: 'include', // 🔑 CRITICAL: Send HTTP-only cookies to backend
       body: JSON.stringify({
         query: completeOnboardingMutation,
         variables: variables
