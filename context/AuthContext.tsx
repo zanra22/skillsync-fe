@@ -690,7 +690,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Handle post-OTP login for signin purpose
         if (authState.pendingPurpose === 'signin' && response.accessToken) {
           console.log('🔄 Processing post-OTP signin with access token from backend...');
-          
+
           // ✅ Backend already returned access token and set HTTP-only cookies
           // No need to call signin again - just store the access token in memory
           const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes (default access token lifetime)
@@ -715,6 +715,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isAuthenticated: true
           });
 
+          // DEBUG: Check if refresh_token cookie is present after OTP verification
+          if (typeof document !== 'undefined') {
+            console.log('🍪 Checking cookies immediately after OTP response...');
+            const cookieHeader = document.cookie;
+            console.log('🍪 All cookies:', cookieHeader);
+            const hasRefreshToken = cookieHeader.includes('refresh_token=');
+            console.log('🔍 refresh_token present after OTP:', hasRefreshToken);
+          }
+
           // Show success toast for OTP-verified login
           if (typeof window !== 'undefined') {
             const { toast } = await import('sonner');
@@ -723,6 +732,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Clean up pending login data
           sessionStorage.removeItem('pending-login');
+
+          // ⏳ Wait a moment before redirecting to ensure cookies are fully processed
+          // This gives the browser time to process the Set-Cookie headers from the response
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          console.log('🔍 Checking cookies again after 500ms delay...');
+          if (typeof document !== 'undefined') {
+            const cookieHeader = document.cookie;
+            console.log('🍪 Cookies after delay:', cookieHeader);
+            const hasRefreshToken = cookieHeader.includes('refresh_token=');
+            console.log('🔍 refresh_token present after delay:', hasRefreshToken);
+          }
 
           console.log('🚀 Redirecting based on role:', response.user?.role);
           // Role-based redirect
@@ -737,8 +758,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Handle post-OTP signup verification
         if (authState.pendingPurpose === 'signup' && response.accessToken) {
-          console.log('� Processing post-OTP signup with access token from backend...');
-          
+          console.log('🎉 Processing post-OTP signup with access token from backend...');
+
           // ✅ Backend already returned access token and set HTTP-only cookies for signup
           const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes (default access token lifetime)
 
@@ -762,6 +783,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
             needsOnboarding: needsOnboarding(response.user)
           });
 
+          // DEBUG: Check if refresh_token cookie is present after OTP verification
+          if (typeof document !== 'undefined') {
+            console.log('🍪 Checking cookies immediately after OTP response (signup)...');
+            const cookieHeader = document.cookie;
+            console.log('🍪 All cookies:', cookieHeader);
+            const hasRefreshToken = cookieHeader.includes('refresh_token=');
+            console.log('🔍 refresh_token present after OTP (signup):', hasRefreshToken);
+          }
+
           // Show success toast
           if (typeof window !== 'undefined') {
             const { toast } = await import('sonner');
@@ -770,6 +800,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Clean up pending signup data
           sessionStorage.removeItem('pending-signup');
+
+          // ⏳ Wait a moment before redirecting to ensure cookies are fully processed
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          console.log('🔍 Checking cookies again after 500ms delay (signup)...');
+          if (typeof document !== 'undefined') {
+            const cookieHeader = document.cookie;
+            console.log('🍪 Cookies after delay (signup):', cookieHeader);
+            const hasRefreshToken = cookieHeader.includes('refresh_token=');
+            console.log('🔍 refresh_token present after delay (signup):', hasRefreshToken);
+          }
 
           console.log('🚀 Redirecting new user to onboarding...');
           // Always redirect new users to onboarding after successful signup
