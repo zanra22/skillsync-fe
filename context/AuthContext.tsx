@@ -523,58 +523,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       console.log('🔄 Refreshing access token...');
 
-      // ⚠️ REMOVED: Development mode early return - now always attempts refresh
-      // This allows refresh token to work properly in dev with cross-origin backend
-      
-      // In production, use direct GraphQL call (not available in development due to cookie restrictions)
-      const refreshMutation = `
-        mutation RefreshToken {
-          auth {
-            refreshToken {
-              success
-              message
-              accessToken
-              expiresIn
-            }
-          }
-        }
-      `;
-      
-      const response = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'http://127.0.0.1:8000/graphql/', {
+      // 🔑 CRITICAL: Use Next.js API route instead of direct GraphQL call
+      // This allows server-side code to properly handle HTTP-only cookies
+      // and forward Set-Cookie headers from backend to client
+      const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies
-        body: JSON.stringify({
-          query: refreshMutation
-        }),
+        credentials: 'include', // Include cookies in request
       });
-      
+
       console.log('🔍 Refresh response status:', response.status, response.ok);
 
       if (response.ok) {
         const result = await response.json();
         console.log('🔍 Refresh response data:', result);
-        const tokenData = result.data?.auth?.refreshToken;
 
-        if (tokenData?.success && tokenData?.accessToken) {
-          const expiresAt = Date.now() + ((tokenData.expiresIn || 3600) * 1000);
-          
+        if (result.success && result.accessToken) {
+          const expiresAt = Date.now() + ((result.expiresIn || 3600) * 1000);
+
           setAuthState(prev => ({
             ...prev,
-            accessToken: tokenData.accessToken,
+            accessToken: result.accessToken,
             tokenExpiresAt: expiresAt,
             isAuthenticated: true
           }));
-          
-              // Debug: Log cookies after refresh to confirm new refresh_token is present
-              if (typeof document !== 'undefined') {
-                const cookieHeader = document.cookie;
-                console.log('🍪 Cookies after refresh:', cookieHeader);
-                const hasRefreshToken = cookieHeader.includes('refresh_token=');
-                console.log('🔍 refresh_token present after refresh:', hasRefreshToken);
-              }
+
+          // Debug: Log cookies after refresh to confirm new refresh_token is present
+          if (typeof document !== 'undefined') {
+            const cookieHeader = document.cookie;
+            console.log('🍪 Cookies after refresh:', cookieHeader);
+            const hasRefreshToken = cookieHeader.includes('refresh_token=');
+            console.log('🔍 refresh_token present after refresh:', hasRefreshToken);
+          }
           console.log('✅ Token refreshed successfully');
           return true;
         }
