@@ -749,13 +749,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Role-based redirect
           if (response.user) {
             try {
-              redirectBasedOnRole(response.user);
+              // ⏹️ TEMPORARILY DISABLED FOR DEBUGGING - Remove to re-enable redirect
+              // redirectBasedOnRole(response.user);
+              console.log('🔴 SIGNIN REDIRECT DISABLED FOR DEBUGGING - Check console logs above');
             } catch (redirectError) {
               console.error('❌ Redirect error:', redirectError);
             }
           }
         }
-        
+
         // Handle post-OTP signup verification
         if (authState.pendingPurpose === 'signup' && response.accessToken) {
           console.log('🎉 Processing post-OTP signup with access token from backend...');
@@ -815,8 +817,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.log('🚀 Redirecting new user to onboarding...');
           // Always redirect new users to onboarding after successful signup
           if (typeof window !== 'undefined' && response.user) {
+            // ⏹️ TEMPORARILY DISABLED FOR DEBUGGING - Remove to re-enable redirect
             // Use redirectBasedOnRole which will check needsOnboarding
-            redirectBasedOnRole(response.user);
+            // redirectBasedOnRole(response.user);
+            console.log('🔴 SIGNUP REDIRECT DISABLED FOR DEBUGGING - Check console logs above');
           }
         }
         
