@@ -11,6 +11,7 @@ export const setApolloAccessToken = (token: string | null) => {
 };
 
 // HTTP link for GraphQL endpoint
+// 🔑 CRITICAL: In development, use http://localhost:8000 (NOT 127.0.0.1) to match frontend origin
 const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "https://skillsync-graphql-e2dpdxhgebeqhhhk.southeastasia-01.azurewebsites.net",
   credentials: 'include', // ✅ CRITICAL: Send cookies with every request (refresh_token)
