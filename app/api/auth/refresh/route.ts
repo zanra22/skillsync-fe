@@ -80,10 +80,22 @@ export async function POST(request: NextRequest) {
 
     const backendUrl = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'http://127.0.0.1:8000/graphql/';
 
-    // Prepare headers
+    // Prepare headers - CRITICAL: Forward User-Agent for fingerprint validation
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+
+    // Forward original User-Agent from browser (required for backend fingerprint validation)
+    const userAgent = request.headers.get('user-agent');
+    if (userAgent) {
+      headers['User-Agent'] = userAgent;
+    }
+
+    // Forward X-Forwarded-For for IP tracking
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+      headers['X-Forwarded-For'] = forwardedFor;
+    }
 
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;

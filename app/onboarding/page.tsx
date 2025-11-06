@@ -198,8 +198,9 @@ export default function OnboardingPage() {
           ?.split('=')[1];
         console.log('Cookie verification - user-role now set to:', cookieValue);
 
-        // Longer delay to ensure cookie is processed
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Short delay to ensure cookie updates are processed by the browser
+        // The API route now forwards Set-Cookie headers from backend, so refresh_token is already updated
+        await new Promise(resolve => setTimeout(resolve, 500));
       } else {
         console.log('No user role found in backend response. Cannot update cookie.');
         console.log('Backend response structure:', {

@@ -114,12 +114,27 @@ export async function POST(request: NextRequest) {
 
         const backendUrl = process.env.NEXT_PUBLIC_GRAPHQL_API_URL || 'http://127.0.0.1:8000/graphql/';
 
+        // Prepare headers with User-Agent forwarding for fingerprint validation
+        const refreshHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Cookie': cookieHeader || '',
+        };
+
+        // Forward original User-Agent from browser (required for backend fingerprint validation)
+        const userAgent = request.headers.get('user-agent');
+        if (userAgent) {
+          refreshHeaders['User-Agent'] = userAgent;
+        }
+
+        // Forward X-Forwarded-For for IP tracking
+        const forwardedFor = request.headers.get('x-forwarded-for');
+        if (forwardedFor) {
+          refreshHeaders['X-Forwarded-For'] = forwardedFor;
+        }
+
         const tokenRefreshResponse = await fetch(backendUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': cookieHeader || '',
-          },
+          headers: refreshHeaders,
           credentials: 'include', // 🔑 CRITICAL: Send HTTP-only cookies to backend
           body: JSON.stringify({
             query: refreshMutation,
@@ -307,6 +322,18 @@ export async function POST(request: NextRequest) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
+    // Forward original User-Agent from browser (required for backend fingerprint validation)
+    const userAgent = request.headers.get('user-agent');
+    if (userAgent) {
+      headers['User-Agent'] = userAgent;
+    }
+
+    // Forward X-Forwarded-For for IP tracking
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+      headers['X-Forwarded-For'] = forwardedFor;
+    }
+
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;
     }
@@ -365,6 +392,9 @@ export async function POST(request: NextRequest) {
       console.log('No fresh token in backend response');
     }
 
+    // Extract Set-Cookie headers from backend response
+    const backendSetCookies = graphqlResponse.headers.get('set-cookie');
+
     // Return the response with tokens for frontend to handle
     const response = NextResponse.json({
       success: true,
@@ -374,6 +404,15 @@ export async function POST(request: NextRequest) {
       accessToken: onboardingResult.accessToken,
       expiresIn: onboardingResult.expiresIn
     });
+
+    // 🔑 CRITICAL: Forward Set-Cookie headers from backend to client
+    // This ensures the rotated refresh_token cookie is properly set in the browser
+    if (backendSetCookies) {
+      console.log('Forwarding Set-Cookie headers from backend to client');
+      response.headers.set('Set-Cookie', backendSetCookies);
+    } else {
+      console.log('⚠️ No Set-Cookie headers in backend response');
+    }
 
     return response;
 
