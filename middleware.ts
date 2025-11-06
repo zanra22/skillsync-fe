@@ -34,7 +34,7 @@ const publicRoutes = [
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Allow static files and API routes (no auth check needed)
   if (
     pathname.startsWith('/_next') ||
@@ -48,10 +48,11 @@ export function middleware(request: NextRequest) {
   // ✅ SECURITY: Check if user has valid session by attempting to read refresh_token
   // We can't read its value (HTTP-only), but we can check if it exists
   const hasRefreshToken = request.cookies.has('refresh_token');
+
   const isAuthenticated = hasRefreshToken;
   
-  console.log('🔍 Middleware:', { 
-    pathname, 
+  console.log('🔍 Middleware:', {
+    pathname,
     isAuthenticated,
     hasRefreshToken,
     allCookies: request.cookies.getAll().map(c => c.name)

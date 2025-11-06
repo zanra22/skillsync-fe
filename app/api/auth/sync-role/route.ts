@@ -3,10 +3,8 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Syncing user role from database...');
-    
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
+    console.log('Syncing user role from database...');
+
     // Get cookies
     const cookieHeader = request.headers.get('cookie');
     const requestCookies = request.cookies;
@@ -74,12 +72,7 @@ export async function POST(request: NextRequest) {
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;
     }
-    
-    if (isDevelopment) {
-      headers['X-Dev-User-ID'] = 'sDV6TZHZjT';
-      headers['X-Dev-Mode'] = 'true';
-    }
-    
+
     const graphqlResponse = await fetch(backendUrl, {
       method: 'POST',
       headers: headers,

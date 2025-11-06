@@ -5,7 +5,6 @@ import { authApi, tokenManager } from '@/api/auth/signin';
 import { otpApi, deviceUtils } from '@/api/auth/otp';
 import type { SignInResponseDto, SignUpRequestDto } from '@/types/auth/dto';
 import type { DeviceInfoDto, VerifyOTPResponseDto } from '@/types/auth/otp';
-import { devAuthHelper } from '@/lib/dev-auth-helper';
 import { setApolloAccessToken } from '@/lib/apollo-client'; // ✅ NEW: Update Apollo Client with token
 
 interface AuthState {
@@ -258,44 +257,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check for existing session on mount
   useEffect(() => {
-    // In development, try to restore immediately from localStorage first
-    if (devAuthHelper.isDevelopment()) {
-      const devState = devAuthHelper.restore();
-      if (devState && devState.isAuthenticated) {
-        console.log('🔧 Hot reload detected, restoring auth state immediately');
-        setAuthState(prev => ({ 
-          ...prev, 
-          isAuthenticated: true,
-          isLoading: false // Set to false immediately to prevent redirects
-        }));
-      }
-    }
-    
     // Add a small delay to allow other initialization to complete
     const timer = setTimeout(() => {
       checkExistingSession();
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
   const checkExistingSession = async () => {
     try {
       console.log('🔍 Checking for existing session...');
-      
+
       // ✅ SECURITY: Use ONLY HTTP-only refresh_token cookie (backend-managed)
       // No longer check frontend auth-token cookie
       console.log('🔐 Attempting session restore via HTTP-only refresh token...');
-      
-      // In development, try to restore from dev helper first
-      const devState = devAuthHelper.restore();
-      if (devState && devState.isAuthenticated) {
-        console.log('🔧 Found dev auth state, attempting to validate...');
-      }
-      
-      // In development, add more retry logic for hot reload scenarios
+
       let retryCount = 0;
-      const maxRetries = devAuthHelper.isDevelopment() ? 2 : 1; // Reduced retries
+      const maxRetries = 1;
       
       while (retryCount < maxRetries) {
         try {
@@ -324,21 +303,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 isLoading: false,
                 tokenExpiresAt: expiresAt,
               }));
-              
-              // Save to dev helper for hot reload persistence
-              devAuthHelper.save(true, userProfile.role);
-              
+
               console.log('👤 User profile loaded successfully:', {
                 role: userProfile.role,
                 email: userProfile.email,
                 isAuthenticated: true
               });
               return; // Success, exit retry loop
-              
+
             } catch (profileError) {
               console.error('❌ Error fetching user profile:', profileError);
               // Clear invalid session
-              devAuthHelper.clear();
               setAuthState(prev => ({
                 ...prev,
                 user: null,
@@ -354,28 +329,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
             break;
           }
         } catch (error) {
-          // In development, don't spam console with expected errors
-          if (devAuthHelper.isDevelopment() && retryCount === maxRetries - 1) {
-            console.log('🔧 Session validation failed (expected in development)');
-          } else if (!devAuthHelper.isDevelopment()) {
-            console.log(`🔄 Session check attempt ${retryCount + 1}/${maxRetries} failed:`, error);
-          }
+          console.log(`🔄 Session check attempt ${retryCount + 1}/${maxRetries} failed:`, error);
           retryCount++;
-          
+
           if (retryCount < maxRetries) {
             // Wait before retry
             await new Promise(resolve => setTimeout(resolve, 300));
           }
         }
       }
-      
+
       // No session found after all retries
-      if (devAuthHelper.isDevelopment()) {
-        console.log('🔧 No valid session - user is not authenticated');
-      } else {
-        console.log('ℹ️ No existing session found - user needs to sign in');
-      }
-      devAuthHelper.clear();
+      console.log('ℹ️ No existing session found - user needs to sign in');
       setAuthState(prev => ({ 
         ...prev, 
         isLoading: false,
@@ -385,13 +350,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
     } catch (error) {
       console.error('❌ Session check failed:', error);
-      devAuthHelper.clear();
-      setAuthState(prev => ({ 
-        ...prev, 
+      setAuthState(prev => ({
+        ...prev,
         isLoading: false,
         isAuthenticated: false,
         user: null,
-        accessToken: null 
+        accessToken: null
       }));
     }
   };
@@ -558,23 +522,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshToken = async (): Promise<boolean> => {
     try {
       console.log('🔄 Refreshing access token...');
-      
-      // In development mode, check if we have a refresh token at all
-      if (process.env.NODE_ENV === 'development') {
-        const cookieHeader = document.cookie;
-        const hasRefreshToken = cookieHeader.includes('refresh_token=');
-        
-        if (!hasRefreshToken) {
-          console.log('❌ Token refresh failed: No refresh token provided');
-          console.log('🔧 Development mode: Cookies may not be accessible to client-side JS');
-          console.log('⚠️ Not logging out - server-side authentication may still be valid');
-          return false; // Don't logout, just return false
-        }
-        
-        // For development, let server-side handle the refresh token validation
-        console.log('🔧 Development mode: Deferring refresh token validation to server-side');
-        return false; // Let the API route handle it
-      }
+
+      // ⚠️ REMOVED: Development mode early return - now always attempts refresh
+      // This allows refresh token to work properly in dev with cross-origin backend
       
       // In production, use direct GraphQL call (not available in development due to cookie restrictions)
       const refreshMutation = `
@@ -601,10 +551,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }),
       });
       
+      console.log('🔍 Refresh response status:', response.status, response.ok);
+
       if (response.ok) {
         const result = await response.json();
+        console.log('🔍 Refresh response data:', result);
         const tokenData = result.data?.auth?.refreshToken;
-        
+
         if (tokenData?.success && tokenData?.accessToken) {
           const expiresAt = Date.now() + ((tokenData.expiresIn || 3600) * 1000);
           
@@ -628,10 +581,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       
       console.log('❌ Token refresh failed - no access token received');
+      console.log('🔍 Response details:', response.status, response.statusText);
+
       await logout();
       return false;
     } catch (error) {
       console.error('❌ Token refresh failed:', error instanceof Error ? error.message : 'Unknown error');
+
       await logout();
       return false;
     }
