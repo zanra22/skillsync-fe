@@ -270,7 +270,7 @@ const SystemOverview = () => {
                 borderRadius: '8px',
                 color: '#F9FAFB'
               }}
-              formatter={(value) => [`$${value.toLocaleString()}`, '']}
+              formatter={(value) => [`$${(value || 0).toLocaleString()}`, '']}
             />
             <Legend />
             <Area 
