@@ -424,7 +424,7 @@ const SystemOverview = () => {
                 color: '#F9FAFB'
               }}
               formatter={(value, name) => [
-                `${value.toLocaleString()} users`,
+                `${(value || 0).toLocaleString()} users`,
                 'Active Users'
               ]}
               labelFormatter={(label) => `Region: ${label}`}
