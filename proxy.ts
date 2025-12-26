@@ -32,7 +32,7 @@ const publicRoutes = [
   '/not-found'
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow static files and API routes (no auth check needed)

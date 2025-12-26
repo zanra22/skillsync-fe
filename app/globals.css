@@ -8,8 +8,8 @@
 
 @layer base {
   :root {
-    /* SkillSync Brand Colors - Neural Blue + Electric Accent */
-    --background: 0 0% 98%;
+    /* SkillSync Brand Colors - Neural Blue + Electric Accent (Refined) */
+    --background: 215 20% 98%;     /* Softer cool gray instead of pure white */
     --foreground: 215 25% 15%;
 
     /* Deep Neural Blue Primary */
@@ -34,14 +34,14 @@
     --tertiary-foreground: 0 0% 100%;
     --tertiary-light: 258 70% 90%;
 
-    /* Neutral Grays */
-    --muted: 215 8% 94%;
-    --muted-foreground: 215 10% 55%;
-    --border: 215 8% 88%;
-    --input: 215 8% 92%;
+    /* Neutral Grays - Enhanced */
+    --muted: 215 15% 95%;          /* Slightly warmer muted */
+    --muted-foreground: 215 10% 50%;
+    --border: 215 15% 90%;         /* Softer borders */
+    --input: 215 15% 96%;          /* Lighter input backgrounds */
     --ring: 195 95% 42%;
 
-    /* Cards & Surfaces */
+    /* Cards & Surfaces - Enhanced Depth */
     --card: 0 0% 100%;
     --card-foreground: 215 25% 15%;
     --popover: 0 0% 100%;
@@ -53,15 +53,22 @@
     --success: 142 70% 45%;
     --warning: 43 96% 56%;
 
-    /* Design System */
-    --radius: 0.75rem;
+    /* Design System - Enhanced */
+    --radius: 0.875rem;            /* Slightly more rounded */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --shadow-soft: 0 4px 20px -4px hsl(215 35% 15% / 0.1);
-    --shadow-elegant: 0 10px 40px -10px hsl(215 35% 15% / 0.15);
+    --shadow-soft: 0 2px 8px -2px hsl(215 35% 15% / 0.08);
+    --shadow-md: 0 4px 16px -4px hsl(215 35% 15% / 0.1);
+    --shadow-elegant: 0 8px 32px -8px hsl(215 35% 15% / 0.12);
+    --shadow-glow: 0 0 24px hsl(195 95% 42% / 0.2);
     --gradient-primary: linear-gradient(135deg, hsl(215 35% 15%), hsl(215 25% 25%));
     --gradient-accent: linear-gradient(135deg, hsl(195 95% 42%), hsl(199 89% 48%));
     --gradient-hero: linear-gradient(135deg, hsl(215 35% 15%) 0%, hsl(215 25% 20%) 25%, hsl(195 95% 25%) 75%, hsl(195 95% 42%) 100%);
     --gradient-neural: radial-gradient(ellipse at top, hsl(195 95% 42% / 0.1) 0%, transparent 50%), linear-gradient(135deg, hsl(215 35% 15%) 0%, hsl(215 30% 12%) 100%);
+    
+    /* Sidebar Colors - Enhanced */
+    --sidebar: 215 20% 99%;        /* Very subtle cool tint */
+    --sidebar-foreground: 215 25% 15%;
+    --sidebar-border: 215 15% 92%;
   }
 
   .dark {
@@ -101,6 +108,11 @@
     --shadow-elegant: 0 10px 40px -10px hsl(0 0% 0% / 0.4);
     --gradient-hero: linear-gradient(135deg, hsl(215 35% 6%) 0%, hsl(215 30% 8%) 25%, hsl(195 80% 15%) 75%, hsl(195 70% 25%) 100%);
     --gradient-neural: radial-gradient(ellipse at top, hsl(195 80% 25% / 0.2) 0%, transparent 50%), linear-gradient(135deg, hsl(215 35% 6%) 0%, hsl(215 30% 4%) 100%);
+    
+    /* Sidebar - Dark */
+    --sidebar: 215 30% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-border: 215 25% 18%;
   }
 }
 
@@ -126,20 +138,41 @@
     @apply transition-all duration-700 ease-out;
   }
 
-  /* Smooth Hover Animations */
+  /* Smooth Hover Animations - Enhanced */
   .hover-lift {
-    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-elegant;
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-1;
+    box-shadow: var(--shadow-elegant);
   }
 
-  /* Glowing Effect */
+  /* Glowing Effect - Enhanced */
   .glow-accent {
-    @apply shadow-[0_0_20px_hsl(var(--accent-glow)/0.3)];
+    box-shadow: var(--shadow-glow);
   }
 
-  /* Feature Card Hover */
+  /* Feature Card Hover - Enhanced */
   .feature-card {
-    @apply bg-card border rounded-xl p-6 transition-all duration-300 hover:border-accent/30 hover:bg-accent-light/5 hover:-translate-y-1;
+    @apply bg-card border rounded-xl p-6 transition-all duration-300;
     border-color: hsl(var(--border));
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .feature-card:hover {
+    @apply border-accent/30 bg-accent-light/5 -translate-y-1;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Card Hover Effects (from Skill-Weaver) */
+  .card-hover {
+    @apply transition-all duration-300 ease-out relative;
+  }
+  
+  .card-hover:hover {
+    box-shadow: var(--shadow-elegant), 0 0 0 1px hsl(var(--primary) / 0.2);
+    border-color: hsl(var(--primary) / 0.3);
   }
 
   /* Gradient Text */
@@ -179,15 +212,26 @@
     @apply animate-pulse;
   }
 
-  /* Button Variants */
+  /* Button Variants - Enhanced */
   .btn-hero {
-    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-8 py-4 rounded-xl transition-all duration-300 hover:shadow-[0_8px_30px_hsl(var(--accent)/0.3)] hover:-translate-y-0.5;
+    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-8 py-4 rounded-xl transition-all duration-300 active:scale-95;
     font-family: 'Poppins', sans-serif;
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .btn-hero:hover {
+    box-shadow: var(--shadow-glow);
+    @apply -translate-y-0.5;
   }
 
   .btn-secondary {
-    @apply bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--secondary)/0.3)];
+    @apply bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300;
     font-family: 'Poppins', sans-serif;
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .btn-secondary:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .btn-outline {
@@ -196,13 +240,52 @@
   }
 
   .btn-primary {
-    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--primary)/0.3)];
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300;
     font-family: 'Poppins', sans-serif;
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .btn-primary:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .btn-accent {
-    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_6px_20px_hsl(var(--accent)/0.3)];
+    @apply bg-accent hover:bg-accent/90 text-accent-foreground font-medium px-6 py-3 rounded-lg transition-all duration-300;
     font-family: 'Poppins', sans-serif;
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .btn-accent:hover {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Glass Effect - New */
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .glass-strong {
+    @apply bg-card/90 backdrop-blur-2xl border border-border/60;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted/50 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
   }
 }
 
@@ -263,12 +346,6 @@
       opacity: 1;
       transform: translateX(0);
     }
-  }
-
-  /* Tab transition animations */
-  .tab-content-enter {
-    opacity: 0;
-    transform: translateY(10px);
   }
 
   .tab-content-enter-active {
